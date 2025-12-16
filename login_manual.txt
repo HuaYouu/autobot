@@ -1,1 +1,1 @@
-w2 r w1 c23 w1 c10 w1 /home w1 0
+w2 "/register MyPassword123 MyPassword123" w1 0

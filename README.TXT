@@ -50,7 +50,7 @@ Các lệnh hợp lệ:
 -   `l`: Click chuột trái (vung tay).
 -   `c[số]`: Click vào ô thứ `[số]` trong giao diện (GUI). (Ví dụ: `c10`)
 -   `0`: Kết thúc kịch bản.
--   Bất kỳ chuỗi nào khác sẽ được bot chat ra server. (Ví dụ: `/login matkhau123`)
+-   Bất kỳ chuỗi nào khác sẽ được bot chat ra server. (Ví dụ: `/login matkhau123`). Để chat một lệnh có chứa khoảng trắng, hãy đặt toàn bộ lệnh đó vào trong dấu ngoặc kép (ví dụ: `"/register pass123 pass123"`).
 
 ### 2. Điều khiển Di chuyển qua Chat
 Nếu `testModule.enable` là `true`, bạn có thể ra lệnh cho bot di chuyển trong game bằng cách chat.
