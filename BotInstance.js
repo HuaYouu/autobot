@@ -7,8 +7,7 @@ const BotMovement = require('./modules/utils/movement.js');
 const ModuleManager = require('./modules/ModuleManager.js');
 
 // Import các module chức năng
-const MovementControllerModule = require('./modules/features/movementController.js');
-const CommandManagerModule = require('./modules/features/commandManager.js');
+const CombatManager = require('./modules/features/combatManager.js');
 
 /**
  * Đại diện cho một instance bot độc lập, quản lý vòng đời của chính nó.
@@ -88,11 +87,10 @@ class BotInstance {
     this.moduleManager = new ModuleManager(this.bot, this.name, fullSettings);
 
     // Đăng ký các module
-    const movementController = new MovementControllerModule(this.bot, this.config.modules.movementController, movementUtil);
-    this.moduleManager.register('movementController', movementController);
-
-    const commandManager = new CommandManagerModule(this.bot, this.config.modules.commandManager, this.moduleManager);
-    this.moduleManager.register('commandManager', commandManager);
+    if (this.config.modules.combatManager) {
+      const combatManager = new CombatManager(this.bot, this.config.modules.combatManager, movementUtil);
+      this.moduleManager.register('combatManager', combatManager);
+    }
 
     this.moduleManager.initializeModules();
 

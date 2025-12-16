@@ -66,6 +66,19 @@ function setupCLI() {
         }
         break;
 
+      case 'module':
+        if (args.length < 3) {
+          console.log('Sử dụng: module <tên_bot> <tên_module> <on|off>');
+        } else {
+          const [botName, moduleName, state] = args;
+          if (state !== 'on' && state !== 'off') {
+            console.log("Trạng thái không hợp lệ. Sử dụng 'on' hoặc 'off'.");
+          } else {
+            botManager.toggleModule(botName, moduleName, state === 'on');
+          }
+        }
+        break;
+
       case 'exit':
         console.log('Đang dừng tất cả các bot và thoát...');
         botManager.listBots().forEach(botName => botManager.stopBot(botName));

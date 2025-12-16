@@ -63,6 +63,26 @@ class BotManager {
   listBots() {
     return Array.from(this.runningBots.keys());
   }
+
+  /**
+   * Bật hoặc tắt một module của một bot cụ thể.
+   * @param {string} botName - Tên của bot.
+   * @param {string} moduleName - Tên của module.
+   * @param {boolean} state - `true` để bật, `false` để tắt.
+   */
+  toggleModule(botName, moduleName, state) {
+    const botInstance = this.runningBots.get(botName);
+    if (!botInstance) {
+      console.log(`Bot "${botName}" không đang chạy hoặc không tồn tại.`);
+      return;
+    }
+    if (!botInstance.moduleManager) {
+      console.log(`Bot "${botName}" chưa khởi tạo xong ModuleManager.`);
+      return;
+    }
+    console.log(`BotManager: Yêu cầu ${state ? 'bật' : 'tắt'} module "${moduleName}" cho bot "${botName}"...`);
+    botInstance.moduleManager.toggle(moduleName, state);
+  }
 }
 
 module.exports = BotManager;

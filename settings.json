@@ -18,16 +18,27 @@
         "allowParkour": true
       },
       "modules": {
-        "commandManager": {
+        "combatManager": {
           "enabled": true,
           "options": {
-            "commandPrefix": "!"
-          }
-        },
-        "movementController": {
-          "enabled": true,
-          "options": {
-            "commandPrefix": "!"
+            "mode": "patrol",
+            "guardianTarget": "Player1",
+            "retreatHealthLevel": 10,
+            "patrolArea": [
+              { "x": 100, "y": 64, "z": 100 },
+              { "x": 100, "y": 64, "z": 120 },
+              { "x": 120, "y": 64, "z": 120 },
+              { "x": 120, "y": 64, "z": 100 }
+            ],
+            "blacklist": ["Zombie", "Skeleton", "Creeper"],
+            "whitelist": ["Player1", "Bot2"],
+            "submodules": {
+              "targeting": true,
+              "movement": true,
+              "attack": true,
+              "defense": false,
+              "support": false
+            }
           }
         }
       }
@@ -43,24 +54,12 @@
       "enableLoginMenu": false,
       "loginScript": "login_manual.txt",
       "movementOptions": {
-        "goalRadius": 2,
-        "canBreakBlocks": false,
-        "canPlaceBlocks": false,
-        "allowSprinting": true,
-        "allowParkour": true
+        "goalRadius": 2
       },
       "modules": {
-        "commandManager": {
+        "combatManager": {
           "enabled": false,
-          "options": {
-            "commandPrefix": "."
-          }
-        },
-        "movementController": {
-          "enabled": false,
-          "options": {
-            "commandPrefix": "."
-          }
+          "options": {}
         }
       }
     }
