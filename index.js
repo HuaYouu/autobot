@@ -11,8 +11,7 @@ const botArgs = {
   port: settings.port,
   username: settings.username,
   auth: settings.auth,
-  // Tăng version để hỗ trợ các thư viện mới tốt hơn
-  version: '1.18.2'
+  version: settings.version || '1.18.2' // Lấy phiên bản từ settings.json hoặc dùng giá trị mặc định
 };
 
 // Biến toàn cục để quản lý các module

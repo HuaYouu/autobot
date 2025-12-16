@@ -24,6 +24,7 @@ Tất cả các cấu hình của bot đều nằm trong file `settings.json`.
 -   `port`: Cổng của server Minecraft.
 -   `username`: Tên nhân vật của bot.
 -   `auth`: Phương thức xác thực ("offline" hoặc "microsoft").
+-   `version`: Phiên bản Minecraft của server (ví dụ: "1.18.2", "1.16.5").
 -   `enableLoginMenu`: Bật/tắt kịch bản điều hướng menu khi đăng nhập (`true`/`false`).
 
 ### Cấu hình Di chuyển (`movement`)

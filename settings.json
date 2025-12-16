@@ -3,6 +3,7 @@
   "port": 25565,
   "username": "MyBot",
   "auth": "offline",
+  "version": "1.18.2",
   "enableLoginMenu": true,
   "movement": {
     "goalRadius": 2,
