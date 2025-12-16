@@ -1,12 +1,12 @@
-MINECRAFT BOT - KIẾN TRÚC MODULE
+NỀN TẢNG QUẢN LÝ BOT MINECRAFT
 ===================================
 
-Đây là một bot Minecraft được xây dựng bằng Node.js và thư viện Mineflayer, với kiến trúc module linh hoạt cho phép bật/tắt các chức năng trong lúc bot đang chạy.
+Đây là một framework mạnh mẽ được xây dựng bằng Node.js và Mineflayer để quản lý và chạy nhiều bot Minecraft độc lập cùng một lúc. Nền tảng này cho phép khởi động, dừng và quản lý các bot trong thời gian thực thông qua một giao diện dòng lệnh (CLI).
 
-## KIẾN TRÚC MODULE
-Dự án được tổ chức thành hai loại module chính:
--   **Modules Chức năng (`modules/features/`)**: Các module có thể bật/tắt, chứa logic cho một tính năng cụ thể (ví dụ: tự farm, tự đánh).
--   **Modules Tiện ích (`modules/utils/`)**: Các thư viện tái sử dụng, cung cấp các hàm tiện ích (ví dụ: module di chuyển) và luôn sẵn sàng để được gọi.
+## KIẾN TRÚC
+-   **BotManager**: Lớp trung tâm quản lý tất cả các bot đang hoạt động.
+-   **BotInstance**: Một lớp đại diện cho mỗi bot độc lập, chứa logic và hệ thống module riêng của nó.
+-   **Hệ thống Module**: Mỗi bot có một hệ thống module riêng, cho phép bật/tắt các chức năng (`features`) một cách linh hoạt.
 
 ## YÊU CẦU
 - Node.js (khuyên dùng phiên bản LTS mới nhất)
@@ -17,63 +17,55 @@ Dự án được tổ chức thành hai loại module chính:
 2.  Chạy lệnh `npm install` để cài đặt các thư viện cần thiết.
 
 ## CẤU HÌNH (`settings.json`)
-File `settings.json` là trung tâm cấu hình của bot.
+File `settings.json` cho phép bạn định nghĩa và cấu hình tất cả các bot mà bạn muốn quản lý.
 
-### Cấu hình Chung
--   `host`, `port`, `username`, `auth`, `version`: Thông tin kết nối server.
--   `enableLoginMenu`: Bật/tắt kịch bản điều hướng menu khi đăng nhập.
+### Cấu trúc Tổng thể
+File chứa một object chính là `"bots"`. Mỗi key bên trong object này là **tên định danh duy nhất** cho một bot.
 
-### Cấu hình Module Tiện ích
--   `movementOptions`: Chứa các tham số cho module di chuyển (tiện ích).
-    -   `goalRadius`, `canBreakBlocks`, `canPlaceBlocks`, v.v.
-
-### Cấu hình Modules Chức năng (`modules`)
-Mục này quản lý trạng thái và cấu hình cho các module chức năng.
--   Mỗi key trong mục `modules` là tên của một module chức năng.
--   `enabled`: Trạng thái mặc định của module khi bot khởi động (`true` hoặc `false`).
--   `options`: Chứa các tham số riêng của module đó.
-
-**Ví dụ cấu trúc `modules`:**
 ```json
-"modules": {
-  "commandManager": {
-    "enabled": true,
-    "options": {
-      "commandPrefix": "!"
-    }
-  },
-  "movementController": {
-    "enabled": true,
-    "options": {
-      "commandPrefix": "!"
-    }
+{
+  "bots": {
+    "bot_ten_1": { ... cấu hình cho bot 1 ... },
+    "bot_ten_2": { ... cấu hình cho bot 2 ... }
   }
 }
 ```
 
+### Cấu hình Chi tiết cho Mỗi Bot
+Mỗi object cấu hình bot chứa các thông tin sau:
+-   `enabled_on_startup`: (`true`/`false`) - Nếu là `true`, bot sẽ tự động khởi chạy khi bạn bắt đầu chương trình.
+-   `host`, `port`, `username`, `auth`, `version`: Thông tin kết nối server.
+-   `password`: (Tùy chọn) Mật khẩu cho các server yêu cầu `/login`. Bot sẽ tự động gửi lệnh `/register` và `/login`.
+-   `enableLoginMenu`: (`true`/`false`) - Bật/tắt việc thực thi kịch bản điều hướng.
+-   `loginScript`: Tên file kịch bản điều hướng (ví dụ: `"login_manual.txt"`).
+-   `movementOptions`: Cấu hình cho module di chuyển.
+-   `modules`: Cấu hình trạng thái và tùy chọn cho các module chức năng của bot đó.
+
 ## CÁCH SỬ DỤNG
 
-### 1. Kịch bản Điều hướng (Menu Navigation)
--   Nếu `enableLoginMenu` là `true`, bot sẽ thực thi các lệnh trong `login_manual.txt`.
--   **Cú pháp mới:** Để chat một lệnh chứa khoảng trắng, hãy đặt nó trong dấu ngoặc kép (ví dụ: `"/register pass123 pass123"`).
-
-### 2. Tương tác qua Chat
-Các lệnh chat được quản lý bởi các module chức năng.
-
-#### a. Module `commandManager`
-Module này cho phép bạn bật/tắt các module khác trong lúc bot đang chạy.
--   **Cú pháp:** `<tiền tố>module <tên_module> <on|off>`
--   **Ví dụ:** `!module movementController off` (sẽ tắt chức năng di chuyển bằng lệnh `!goto`)
--   **Lưu ý:** Thay đổi này sẽ được **lưu lại** vào file `settings.json`.
-
-#### b. Module `movementController`
-Module này cho phép bạn ra lệnh cho bot di chuyển đến một tọa độ.
--   **Cú pháp:** `<tiền tố>goto <x> <y> <z>`
--   **Ví dụ:** `!goto 100 64 -250`
--   Module này có thể được bật/tắt bằng `commandManager`.
-
-## CHẠY BOT
-Để khởi động bot, mở terminal và chạy lệnh:
+### 1. Chạy Nền tảng
+Để khởi động BotManager và các bot được cấu hình, mở terminal và chạy lệnh:
 ```
 node index.js
 ```
+Chương trình sẽ khởi động các bot có `enabled_on_startup: true` và sau đó hiển thị một dấu nhắc lệnh `> ` để bạn tương tác.
+
+### 2. Sử dụng Giao diện Dòng lệnh (CLI)
+Bạn có thể quản lý các bot trong thời gian thực bằng các lệnh sau:
+
+-   **`list`**
+    Liệt kê tất cả các bot đang chạy.
+
+-   **`start <tên_bot>`**
+    Khởi động một bot mới từ cấu hình trong `settings.json`.
+    *Ví dụ:* `start bot_miner_1`
+
+-   **`stop <tên_bot>`**
+    Dừng một bot đang chạy. Bot sẽ ngắt kết nối an toàn khỏi server.
+    *Ví dụ:* `stop bot_guard_1`
+
+-   **`exit`**
+    Dừng tất cả các bot đang chạy và thoát khỏi chương trình.
+
+### 3. Tương tác với Bot trong Game
+Mỗi bot vẫn có hệ thống module riêng và có thể được điều khiển qua chat trong game như trước, miễn là các module tương ứng (`commandManager`, `movementController`) được bật trong cấu hình của bot đó.

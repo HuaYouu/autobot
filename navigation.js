@@ -33,13 +33,12 @@ function parseScript(scriptContent) {
 }
 
 /**
- * Đọc và thực thi kịch bản điều hướng từ file login_manual.txt.
+ * Đọc và thực thi kịch bản điều hướng từ một file được chỉ định.
  * @param {import('mineflayer').Bot} bot - Instance của bot.
- * @param {() => void} onManualLogin - Callback sẽ được gọi khi kịch bản hoàn tất hoặc không tồn tại.
+ * @param {string} scriptPath - Đường dẫn đến file kịch bản.
+ * @param {() => void} onFinish - Callback sẽ được gọi khi kịch bản hoàn tất hoặc không tồn tại.
  */
-async function showLoginMenu(bot, onManualLogin) {
-  const scriptPath = path.join(__dirname, 'login_manual.txt');
-
+async function showLoginMenu(bot, scriptPath, onFinish) {
   try {
     const scriptContent = await fs.promises.readFile(scriptPath, 'utf8');
     const commands = parseScript(scriptContent);
@@ -94,16 +93,15 @@ async function showLoginMenu(bot, onManualLogin) {
     }
 
     console.log('Hoàn tất quá trình điều hướng tự động.');
-    onManualLogin();
+    onFinish();
 
   } catch (error) {
     if (error.code === 'ENOENT') {
-      console.log('Không tìm thấy file "login_manual.txt". Bỏ qua bước điều hướng.');
-      onManualLogin();
+      console.log(`Không tìm thấy file kịch bản tại "${scriptPath}". Bỏ qua bước điều hướng.`);
+      onFinish();
     } else {
       console.error('Đã xảy ra lỗi khi đọc hoặc phân tích kịch bản:', error.message);
       // Dừng bot ở đây thay vì tiếp tục, vì lỗi cú pháp có thể gây ra hành vi không mong muốn.
-      // onManualLogin();
     }
   }
 }

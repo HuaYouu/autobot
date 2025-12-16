@@ -1,77 +1,90 @@
-// Import các thư viện và module cốt lõi
-const mineflayer = require('mineflayer');
+const readline = require('readline');
+const BotManager = require('./BotManager.js');
 const settings = require('./settings.json');
-const { showLoginMenu } = require('./navigation.js');
 
-// Import các module tiện ích và quản lý
-const BotMovement = require('./modules/utils/movement.js');
-const ModuleManager = require('./modules/ModuleManager.js');
-
-// Import các module chức năng
-const MovementControllerModule = require('./modules/features/movementController.js');
-const CommandManagerModule = require('./modules/features/commandManager.js');
+// --- Khởi tạo ---
+const botManager = new BotManager();
 
 /**
- * Hàm chính để khởi tạo và quản lý bot.
+ * Tự động khởi động các bot được đánh dấu `enabled_on_startup: true`.
  */
-function createBot() {
-  console.log(`Đang kết nối tới server ${settings.host}:${settings.port}...`);
-
-  const bot = mineflayer.createBot({
-    host: settings.host,
-    port: settings.port,
-    username: settings.username,
-    auth: settings.auth,
-    version: settings.version || '1.18.2',
-  });
-
-  // --- Giai đoạn 1: Bot Spawn và Điều hướng ---
-  bot.once('spawn', () => {
-    console.log(`Bot "${bot.username}" đã tham gia server.`);
-
-    // Nếu có kịch bản điều hướng, chạy nó trước
-    if (settings.enableLoginMenu) {
-      showLoginMenu(bot, () => initializeMainLogic(bot));
-    } else {
-      initializeMainLogic(bot);
+function startInitialBots() {
+  console.log('Đang khởi động các bot ban đầu...');
+  for (const botName in settings.bots) {
+    const botConfig = settings.bots[botName];
+    if (botConfig.enabled_on_startup) {
+      botManager.startBot(botName, botConfig);
     }
-  });
-
-  // --- Xử lý các sự kiện kết nối ---
-  bot.on('kicked', (reason) => handleDisconnect(`Bị kick: ${reason ? JSON.parse(reason).text : 'Không rõ lý do'}`));
-  bot.on('end', (reason) => handleDisconnect(`Mất kết nối: ${reason || 'Không rõ lý do'}`));
-  bot.on('error', (err) => console.error('Lỗi bot:', err));
-
-  function handleDisconnect(logMessage) {
-    console.log(logMessage);
-    console.log('Sẽ thử kết nối lại sau 30 giây...');
-    setTimeout(createBot, 30000);
   }
 }
 
 /**
- * Khởi tạo logic chính sau khi bot đã sẵn sàng.
- * @param {import('mineflayer').Bot} bot
+ * Thiết lập giao diện dòng lệnh (CLI).
  */
-function initializeMainLogic(bot) {
-  console.log('*** Bắt đầu khởi tạo hệ thống module ***');
+function setupCLI() {
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
 
-  // --- Giai đoạn 2: Khởi tạo các hệ thống cốt lõi ---
-  const movementUtil = new BotMovement(bot, { movement: settings.movementOptions });
-  const moduleManager = new ModuleManager(bot, settings);
+  rl.setPrompt('> ');
+  rl.prompt();
 
-  // --- Giai đoạn 3: Đăng ký các module chức năng ---
-  const movementController = new MovementControllerModule(bot, settings.modules.movementController, movementUtil);
-  moduleManager.register('movementController', movementController);
+  rl.on('line', (line) => {
+    const args = line.trim().split(' ');
+    const command = args.shift().toLowerCase();
 
-  const commandManager = new CommandManagerModule(bot, settings.modules.commandManager, moduleManager);
-  moduleManager.register('commandManager', commandManager);
+    switch (command) {
+      case 'start':
+        if (args.length < 1) {
+          console.log('Sử dụng: start <tên_bot>');
+        } else {
+          const botName = args[0];
+          const botConfig = settings.bots[botName];
+          if (botConfig) {
+            botManager.startBot(botName, botConfig);
+          } else {
+            console.log(`Không tìm thấy cấu hình cho bot "${botName}".`);
+          }
+        }
+        break;
 
-  // --- Giai đoạn 4: Kích hoạt các module theo cấu hình ---
-  moduleManager.initializeModules();
+      case 'stop':
+        if (args.length < 1) {
+          console.log('Sử dụng: stop <tên_bot>');
+        } else {
+          botManager.stopBot(args[0]);
+        }
+        break;
 
-  console.log('*** Bot đã sẵn sàng hoạt động! ***');
+      case 'list':
+        const runningBots = botManager.listBots();
+        if (runningBots.length === 0) {
+          console.log('Không có bot nào đang chạy.');
+        } else {
+          console.log('Các bot đang chạy:', runningBots.join(', '));
+        }
+        break;
+
+      case 'exit':
+        console.log('Đang dừng tất cả các bot và thoát...');
+        botManager.listBots().forEach(botName => botManager.stopBot(botName));
+        rl.close();
+        process.exit(0);
+        break;
+
+      default:
+        console.log('Lệnh không xác định. Các lệnh có sẵn: start, stop, list, exit');
+        break;
+    }
+
+    rl.prompt();
+  }).on('close', () => {
+    console.log('CLI đã đóng.');
+    process.exit(0);
+  });
 }
 
-// --- Khởi chạy Bot lần đầu tiên ---
-createBot();
+// --- Chạy ứng dụng ---
+startInitialBots();
+setupCLI();

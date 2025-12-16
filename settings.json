@@ -1,28 +1,67 @@
 {
-  "host": "localhost",
-  "port": 25565,
-  "username": "MyBot",
-  "auth": "offline",
-  "version": "1.18.2",
-  "enableLoginMenu": true,
-  "movementOptions": {
-    "goalRadius": 2,
-    "canBreakBlocks": false,
-    "canPlaceBlocks": false,
-    "allowSprinting": true,
-    "allowParkour": true
-  },
-  "modules": {
-    "commandManager": {
-      "enabled": true,
-      "options": {
-        "commandPrefix": "!"
+  "bots": {
+    "bot1": {
+      "enabled_on_startup": true,
+      "host": "localhost",
+      "port": 25565,
+      "username": "Bot1",
+      "auth": "offline",
+      "version": "1.18.2",
+      "password": "your_password_here",
+      "enableLoginMenu": true,
+      "loginScript": "login_manual.txt",
+      "movementOptions": {
+        "goalRadius": 2,
+        "canBreakBlocks": false,
+        "canPlaceBlocks": false,
+        "allowSprinting": true,
+        "allowParkour": true
+      },
+      "modules": {
+        "commandManager": {
+          "enabled": true,
+          "options": {
+            "commandPrefix": "!"
+          }
+        },
+        "movementController": {
+          "enabled": true,
+          "options": {
+            "commandPrefix": "!"
+          }
+        }
       }
     },
-    "movementController": {
-      "enabled": true,
-      "options": {
-        "commandPrefix": "!"
+    "bot2": {
+      "enabled_on_startup": false,
+      "host": "localhost",
+      "port": 25565,
+      "username": "Bot2",
+      "auth": "offline",
+      "version": "1.18.2",
+      "password": "another_password",
+      "enableLoginMenu": false,
+      "loginScript": "login_manual.txt",
+      "movementOptions": {
+        "goalRadius": 2,
+        "canBreakBlocks": false,
+        "canPlaceBlocks": false,
+        "allowSprinting": true,
+        "allowParkour": true
+      },
+      "modules": {
+        "commandManager": {
+          "enabled": false,
+          "options": {
+            "commandPrefix": "."
+          }
+        },
+        "movementController": {
+          "enabled": false,
+          "options": {
+            "commandPrefix": "."
+          }
+        }
       }
     }
   }
