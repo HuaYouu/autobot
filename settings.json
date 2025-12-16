@@ -3,5 +3,16 @@
   "port": 25565,
   "username": "MyBot",
   "auth": "offline",
-  "enableLoginMenu": true
+  "enableLoginMenu": true,
+  "movement": {
+    "goalRadius": 2,
+    "canBreakBlocks": false,
+    "canPlaceBlocks": false,
+    "allowSprinting": true,
+    "allowParkour": true
+  },
+  "testModule": {
+    "enable": true,
+    "commandPrefix": "!"
+  }
 }

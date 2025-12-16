@@ -1,8 +1,8 @@
-MINECRAFT BOT TỰ ĐỘNG ĐIỀU HƯỚNG MENU
-=========================================
+MINECRAFT BOT TỰ ĐỘNG - NÂNG CAO
+====================================
 
 Đây là một bot Minecraft được xây dựng bằng Node.js và thư viện Mineflayer.
-Bot có khả năng tự động đăng nhập và thực hiện một chuỗi hành động điều hướng qua menu của server dựa trên một file kịch bản.
+Bot có khả năng tự động đăng nhập, thực hiện chuỗi hành động điều hướng qua menu, và di chuyển đến các tọa độ được chỉ định thông qua lệnh chat.
 
 ## YÊU CẦU
 - Node.js (khuyên dùng phiên bản LTS mới nhất)
@@ -19,35 +19,48 @@ Bot có khả năng tự động đăng nhập và thực hiện một chuỗi h
 ## CẤU HÌNH
 Tất cả các cấu hình của bot đều nằm trong file `settings.json`.
 
--   `host`: Địa chỉ IP của server Minecraft. (Mặc định: "localhost")
--   `port`: Cổng của server Minecraft. (Mặc định: 25565)
--   `username`: Tên nhân vật của bot. (Mặc định: "MyBot")
--   `auth`: Phương thức xác thực. Đặt là "offline" cho các server không yêu cầu bản quyền (cracked), hoặc "microsoft" cho các server yêu cầu tài khoản Microsoft chính thức. (Mặc định: "offline")
--   `enableLoginMenu`: Bật/tắt chức năng điều hướng menu tự động.
-    -   `true`: Khi bot vào server, nó sẽ đọc và thực hiện các lệnh trong file `login_manual.txt`.
-    -   `false`: Bot sẽ bỏ qua file kịch bản và đi thẳng vào logic chính sau khi vào server.
+### Cấu hình Cơ bản
+-   `host`: Địa chỉ IP của server Minecraft.
+-   `port`: Cổng của server Minecraft.
+-   `username`: Tên nhân vật của bot.
+-   `auth`: Phương thức xác thực ("offline" hoặc "microsoft").
+-   `enableLoginMenu`: Bật/tắt kịch bản điều hướng menu khi đăng nhập (`true`/`false`).
 
-## KỊCH BẢN ĐIỀU HƯỚNG
-File `login_manual.txt` chứa chuỗi lệnh mà bot sẽ thực hiện tuần tự. Các lệnh được phân tách bởi khoảng trắng.
+### Cấu hình Di chuyển (`movement`)
+Mục này chứa các tùy chọn cho module di chuyển và tìm đường đi.
+-   `goalRadius`: Bot được coi là "đã đến nơi" khi cách mục tiêu trong bán kính này (tính bằng block).
+-   `canBreakBlocks`: Cho phép bot phá các khối cản đường (`true`/`false`).
+-   `canPlaceBlocks`: Cho phép bot đặt khối để bắc cầu hoặc vượt chướng ngại vật (`true`/`false`).
+-   `allowSprinting`: Cho phép bot chạy nước rút khi di chuyển (`true`/`false`).
+-   `allowParkour`: Cho phép bot thực hiện các cú nhảy parkour để vượt địa hình (`true`/`false`).
+
+### Cấu hình Module Test (`testModule`)
+-   `enable`: Bật hoặc tắt module test di chuyển bằng lệnh chat (`true`/`false`).
+-   `commandPrefix`: Ký tự tiền tố cho các lệnh chat (ví dụ: "!", ".", "#").
+
+## CÁCH SỬ DỤNG
+
+### 1. Kịch bản Điều hướng (Menu Navigation)
+Nếu `enableLoginMenu` là `true`, bot sẽ đọc và thực thi các lệnh trong file `login_manual.txt`.
 
 Các lệnh hợp lệ:
--   `w[số]`: Chờ `[số]` giây. (Ví dụ: `w5` là chờ 5 giây)
+-   `w[số]`: Chờ `[số]` giây. (Ví dụ: `w5`)
 -   `r`: Click chuột phải.
 -   `l`: Click chuột trái (vung tay).
--   `c[số]`: Click vào ô thứ `[số]` trong giao diện (GUI) đang mở. (Ví dụ: `c10` là click vào ô số 10)
--   `0`: Kết thúc kịch bản. Bất kỳ lệnh nào sau lệnh này sẽ bị bỏ qua.
+-   `c[số]`: Click vào ô thứ `[số]` trong giao diện (GUI). (Ví dụ: `c10`)
+-   `0`: Kết thúc kịch bản.
 -   Bất kỳ chuỗi nào khác sẽ được bot chat ra server. (Ví dụ: `/login matkhau123`)
 
-**Ví dụ kịch bản trong `login_manual.txt`:**
-`w2 r w1 c23 w1 /home w1 0`
--   Chờ 2 giây.
--   Click chuột phải.
--   Chờ 1 giây.
--   Click vào ô số 23.
--   Chờ 1 giây.
--   Chat lệnh "/home".
--   Chờ 1 giây.
--   Kết thúc kịch bản.
+### 2. Điều khiển Di chuyển qua Chat
+Nếu `testModule.enable` là `true`, bạn có thể ra lệnh cho bot di chuyển trong game bằng cách chat.
+
+**Cú pháp:** `<tiền tố>goto <x> <y> <z>`
+
+**Ví dụ:** Nếu `commandPrefix` là `"!"`, bạn có thể chat:
+```
+!goto 100 64 -250
+```
+Bot sẽ tự động tìm đường và di chuyển đến tọa độ (X=100, Y=64, Z=-250) và thông báo khi đến nơi hoặc khi không thể tìm thấy đường đi.
 
 ## CHẠY BOT
 Để khởi động bot, mở terminal trong thư mục gốc của dự án và chạy lệnh:
