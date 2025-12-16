@@ -1,92 +1,77 @@
-// Import các thư viện và module cần thiết
+// Import các thư viện và module cốt lõi
 const mineflayer = require('mineflayer');
 const settings = require('./settings.json');
 const { showLoginMenu } = require('./navigation.js');
-const BotMovement = require('./modules/movement.js');
-const TestMovementModule = require('./modules/testMovement.js');
 
-// Biến để lưu trữ thông tin cấu hình bot
-const botArgs = {
-  host: settings.host,
-  port: settings.port,
-  username: settings.username,
-  auth: settings.auth,
-  version: settings.version || '1.18.2' // Lấy phiên bản từ settings.json hoặc dùng giá trị mặc định
-};
+// Import các module tiện ích và quản lý
+const BotMovement = require('./modules/utils/movement.js');
+const ModuleManager = require('./modules/ModuleManager.js');
 
-// Biến toàn cục để quản lý các module
-let bot;
-let movement;
-let testMovement;
-
-// --- Logic chính của Bot sau khi đăng nhập và điều hướng ---
-function mainLogic(bot) {
-  console.log('*** Bot đã sẵn sàng cho logic chính! ***');
-
-  // 1. Khởi tạo module di chuyển cốt lõi
-  movement = new BotMovement(bot, settings);
-
-  // 2. Kiểm tra và khởi tạo module test nếu được bật
-  if (settings.testModule.enable) {
-    testMovement = new TestMovementModule(bot, settings, movement);
-  }
-
-  // Từ đây, bạn có thể phát triển thêm các tính năng khác cho bot
-  // Ví dụ: bot.chat('Xin chào, tôi đã online!');
-}
-
-
-// --- Hàm khởi tạo và quản lý Bot ---
+// Import các module chức năng
+const MovementControllerModule = require('./modules/features/movementController.js');
+const CommandManagerModule = require('./modules/features/commandManager.js');
 
 /**
- * Tạo và cấu hình một instance bot mới.
+ * Hàm chính để khởi tạo và quản lý bot.
  */
 function createBot() {
-  console.log(`Đang kết nối tới server ${botArgs.host}:${botArgs.port}...`);
-  bot = mineflayer.createBot(botArgs);
+  console.log(`Đang kết nối tới server ${settings.host}:${settings.port}...`);
 
-  // --- Xử lý các sự kiện của Bot ---
+  const bot = mineflayer.createBot({
+    host: settings.host,
+    port: settings.port,
+    username: settings.username,
+    auth: settings.auth,
+    version: settings.version || '1.18.2',
+  });
 
-  // Sự kiện 'spawn' được kích hoạt khi bot tham gia vào thế giới game
+  // --- Giai đoạn 1: Bot Spawn và Điều hướng ---
   bot.once('spawn', () => {
-    console.log(`Bot "${bot.username}" đã tham gia server thành công.`);
+    console.log(`Bot "${bot.username}" đã tham gia server.`);
 
-    // Kiểm tra xem có nên chạy kịch bản điều hướng hay không
+    // Nếu có kịch bản điều hướng, chạy nó trước
     if (settings.enableLoginMenu) {
-      showLoginMenu(bot, () => mainLogic(bot));
+      showLoginMenu(bot, () => initializeMainLogic(bot));
     } else {
-      console.log('Bỏ qua kịch bản điều hướng theo cấu hình.');
-      mainLogic(bot);
+      initializeMainLogic(bot);
     }
   });
 
-  // Sự kiện 'kicked'
-  bot.on('kicked', (reason) => {
-    const reasonText = reason ? JSON.parse(reason).text : 'Không rõ lý do';
-    console.log(`Bot đã bị kick. Lý do: ${reasonText}`);
-    reconnect();
-  });
+  // --- Xử lý các sự kiện kết nối ---
+  bot.on('kicked', (reason) => handleDisconnect(`Bị kick: ${reason ? JSON.parse(reason).text : 'Không rõ lý do'}`));
+  bot.on('end', (reason) => handleDisconnect(`Mất kết nối: ${reason || 'Không rõ lý do'}`));
+  bot.on('error', (err) => console.error('Lỗi bot:', err));
 
-  // Sự kiện 'end'
-  bot.on('end', (reason) => {
-    console.log(`Bot đã mất kết nối. Lý do: ${reason || 'Không rõ lý do'}`);
-    reconnect();
-  });
-
-  // Sự kiện 'error'
-  bot.on('error', (err) => {
-    console.error('Đã xảy ra lỗi với bot:', err);
-  });
+  function handleDisconnect(logMessage) {
+    console.log(logMessage);
+    console.log('Sẽ thử kết nối lại sau 30 giây...');
+    setTimeout(createBot, 30000);
+  }
 }
 
 /**
- * Xử lý việc kết nối lại server.
+ * Khởi tạo logic chính sau khi bot đã sẵn sàng.
+ * @param {import('mineflayer').Bot} bot
  */
-function reconnect() {
-    console.log('Sẽ thử kết nối lại sau 30 giây...');
-    setTimeout(createBot, 30000);
-}
+function initializeMainLogic(bot) {
+  console.log('*** Bắt đầu khởi tạo hệ thống module ***');
 
+  // --- Giai đoạn 2: Khởi tạo các hệ thống cốt lõi ---
+  const movementUtil = new BotMovement(bot, { movement: settings.movementOptions });
+  const moduleManager = new ModuleManager(bot, settings);
+
+  // --- Giai đoạn 3: Đăng ký các module chức năng ---
+  const movementController = new MovementControllerModule(bot, settings.modules.movementController, movementUtil);
+  moduleManager.register('movementController', movementController);
+
+  const commandManager = new CommandManagerModule(bot, settings.modules.commandManager, moduleManager);
+  moduleManager.register('commandManager', commandManager);
+
+  // --- Giai đoạn 4: Kích hoạt các module theo cấu hình ---
+  moduleManager.initializeModules();
+
+  console.log('*** Bot đã sẵn sàng hoạt động! ***');
+}
 
 // --- Khởi chạy Bot lần đầu tiên ---
 createBot();

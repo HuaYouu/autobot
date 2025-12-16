@@ -5,15 +5,25 @@
   "auth": "offline",
   "version": "1.18.2",
   "enableLoginMenu": true,
-  "movement": {
+  "movementOptions": {
     "goalRadius": 2,
     "canBreakBlocks": false,
     "canPlaceBlocks": false,
     "allowSprinting": true,
     "allowParkour": true
   },
-  "testModule": {
-    "enable": true,
-    "commandPrefix": "!"
+  "modules": {
+    "commandManager": {
+      "enabled": true,
+      "options": {
+        "commandPrefix": "!"
+      }
+    },
+    "movementController": {
+      "enabled": true,
+      "options": {
+        "commandPrefix": "!"
+      }
+    }
   }
 }
