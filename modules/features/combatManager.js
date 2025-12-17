@@ -1,4 +1,5 @@
 const { GoalFollow } = require('mineflayer-pathfinder').goals;
+const { pvp } = require('mineflayer-pvp');
 
 // Import bộ khung module con
 const TargetingModule = require('./combat/TargetingModule.js');
@@ -31,6 +32,9 @@ class CombatManager {
       patrolIndex: 0,
       isRetreating: false,
     };
+
+    // Tải plugin pvp
+    this.bot.loadPlugin(pvp);
 
     // Khởi tạo các module con
     this.submodules = {
@@ -79,6 +83,7 @@ class CombatManager {
     this.bot.deactivateItem();
     this.movementUtil.stop();
     this.bot.pathfinder.stop();
+    this.bot.pvp.stop();
 
     // Tắt các module con
     Object.values(this.submodules).forEach(sm => sm.disable());
@@ -180,21 +185,10 @@ class CombatManager {
 
   engageTarget() {
     if (!this.state.currentTarget) return;
-    this.bot.lookAt(this.state.currentTarget.position.offset(0, this.state.currentTarget.height, 0));
 
-    // Di chuyển lại gần để tấn công
-    const distance = this.bot.entity.position.distanceTo(this.state.currentTarget.position);
-    if (distance > 3) {
-      this.bot.pathfinder.setGoal({
-        range: 2.5,
-        entity: this.state.currentTarget
-      });
-    }
-
-    // Tấn công
-    if (this.bot.canSee(this.state.currentTarget) && distance < 4) {
-      this.bot.attack(this.state.currentTarget);
-    }
+    // Giao toàn bộ quyền kiểm soát chiến đấu cho plugin pvp
+    // Nó sẽ tự động di chuyển, nhìn và tấn công mục tiêu.
+    this.bot.pvp.attack(this.state.currentTarget);
   }
 
   handleRetreat() {
