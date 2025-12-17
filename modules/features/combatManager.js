@@ -1,5 +1,5 @@
 const { GoalFollow } = require('mineflayer-pathfinder').goals;
-const { pvp } = require('mineflayer-pvp');
+const pvpPlugin = require('mineflayer-pvp').plugin; // Directly access the plugin function for clarity and safety.
 
 // Import bộ khung module con
 const TargetingModule = require('./combat/TargetingModule.js');
@@ -31,10 +31,11 @@ class CombatManager {
       currentTarget: null,
       patrolIndex: 0,
       isRetreating: false,
+      isMovingToPatrolPoint: false,
     };
 
     // Tải plugin pvp
-    this.bot.loadPlugin(pvp);
+    this.bot.loadPlugin(pvpPlugin);
 
     // Khởi tạo các module con
     this.submodules = {
@@ -138,16 +139,34 @@ class CombatManager {
 
   patrolLogic() {
     const patrolPoints = this.config.patrolArea || [];
-    if (patrolPoints.length === 0) return;
+    if (patrolPoints.length === 0 || this.state.isMovingToPatrolPoint) return;
 
-    const targetPoint = patrolPoints[this.state.patrolIndex];
-    const goal = { x: targetPoint.x, y: targetPoint.y, z: targetPoint.z };
+    let targetPoint = patrolPoints[this.state.patrolIndex];
+    let goal = { x: targetPoint.x, y: targetPoint.y, z: targetPoint.z };
 
-    // Nếu đã đến gần điểm tuần tra, chuyển sang điểm tiếp theo
+    // Nếu bot đang đứng yên và đã ở gần một điểm, hãy chuyển ngay sang điểm tiếp theo.
     if (this.bot.entity.position.distanceTo(goal) < 3) {
       this.state.patrolIndex = (this.state.patrolIndex + 1) % patrolPoints.length;
+      targetPoint = patrolPoints[this.state.patrolIndex];
+      goal = { x: targetPoint.x, y: targetPoint.y, z: targetPoint.z };
+      console.log(`[${this.bot.username}] Đã ở gần điểm, chuyển sang điểm tuần tra tiếp theo: ${this.state.patrolIndex}`);
     }
-    this.movementUtil.goTo(goal.x, goal.y, goal.z).catch(() => {});
+
+    this.state.isMovingToPatrolPoint = true;
+    console.log(`[${this.bot.username}] Đang di chuyển đến điểm tuần tra ${this.state.patrolIndex} tại (${goal.x}, ${goal.y}, ${goal.z})`);
+
+    this.movementUtil.goTo(goal.x, goal.y, goal.z)
+      .then(() => {
+        console.log(`[${this.bot.username}] Đã đến điểm tuần tra ${this.state.patrolIndex}.`);
+        this.state.patrolIndex = (this.state.patrolIndex + 1) % patrolPoints.length;
+        this.state.isMovingToPatrolPoint = false;
+      })
+      .catch((err) => {
+        console.error(`[${this.bot.username}] Lỗi khi di chuyển đến điểm tuần tra:`, err.message);
+        this.state.isMovingToPatrolPoint = false;
+        // Đợi một chút trước khi thử lại để tránh spam
+        setTimeout(() => {}, 2500);
+      });
   }
 
   // --- Logic Hành vi ---
