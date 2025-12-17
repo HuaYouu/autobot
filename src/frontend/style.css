@@ -1,0 +1,169 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+
+body {
+  font-family: 'Roboto', sans-serif;
+  background-color: #282c34;
+  color: #abb2bf;
+  margin: 0;
+  padding: 15px;
+  height: 100vh;
+  box-sizing: border-box;
+}
+
+.container {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  gap: 15px;
+}
+
+.column-left {
+  width: 40%;
+  display: flex;
+  flex-direction: column;
+  background-color: #353b45;
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.column-right {
+  width: 60%;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.controls-container, .cli-container {
+  background-color: #353b45;
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.controls-container { height: 70%; overflow-y: auto; }
+.cli-container { height: 30%; display: flex; flex-direction: column; }
+
+h2 {
+  border-bottom: 2px solid #4a5260;
+  padding-bottom: 10px;
+  margin-top: 0;
+  color: #61afef;
+  font-weight: 500;
+}
+h2 i { margin-right: 10px; }
+
+#bot-list { flex-grow: 1; overflow-y: auto; margin-top: 10px; }
+.bot-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 10px;
+    border-radius: 5px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+.bot-item:hover { background-color: #4a5260; }
+.bot-item.selected { background-color: #4a5260; border-color: #61afef; }
+
+.status-icon { margin-right: 10px; width: 20px; text-align: center; }
+.status-icon.running { color: #98c379; }
+.status-icon.waiting { color: #e5c07b; }
+.status-icon.disconnected { color: #e06c75; }
+
+.bot-name { flex-grow: 1; font-weight: 500; }
+
+.status-label {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: bold;
+}
+.status-label.running { background-color: #98c379; color: #282c34; }
+.status-label.waiting { background-color: #e5c07b; color: #282c34; }
+.status-label.disconnected { background-color: #e06c75; color: #282c34; }
+
+.bot-actions {
+    margin-top: auto;
+    padding-top: 10px;
+    display: flex;
+    gap: 10px;
+}
+
+button {
+  padding: 10px 15px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  background-color: #61afef;
+  color: #282c34;
+  font-weight: bold;
+  transition: opacity 0.2s;
+}
+button:hover { opacity: 0.9; }
+button i { margin-right: 8px; }
+
+#delete-bot-btn { background-color: #e06c75; }
+#home-base-btn { background-color: #98c379; width: 100%; margin-top: 20px; }
+#cli-send-btn { border-radius: 0 5px 5px 0; }
+
+
+#cli-output {
+  flex-grow: 1;
+  background-color: #282c34;
+  border: 1px solid #4a5260;
+  padding: 10px;
+  overflow-y: scroll;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.9em;
+  margin-bottom: 10px;
+  border-radius: 5px;
+}
+#cli-output p { margin: 0 0 5px; }
+
+.cli-input-wrapper { display: flex; }
+#cli-input-field {
+  flex-grow: 1;
+  padding: 8px 10px;
+  border: 1px solid #4a5260;
+  background-color: #282c34;
+  color: #abb2bf;
+  border-radius: 5px 0 0 5px;
+  outline: none;
+}
+#cli-input-field:focus { border-color: #61afef; }
+
+#module-controls { margin-top: 20px; }
+.module-control {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 10px;
+    background-color: #282c34;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+.module-control span i { margin-right: 10px; color: #c678dd; }
+
+/* The switch - https://www.w3schools.com/howto/howto_css_switch.asp */
+.switch { position: relative; display: inline-block; width: 60px; height: 34px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+}
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 26px; width: 26px;
+    left: 4px; bottom: 4px;
+    background-color: white;
+    transition: .4s;
+}
+input:checked + .slider { background-color: #61afef; }
+input:focus + .slider { box-shadow: 0 0 1px #61afef; }
+input:checked + .slider:before { transform: translateX(26px); }
+.slider.round { border-radius: 34px; }
+.slider.round:before { border-radius: 50%; }

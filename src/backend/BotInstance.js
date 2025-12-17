@@ -1,34 +1,38 @@
 const mineflayer = require('mineflayer');
 const path = require('path');
+const { EventEmitter } = require('events');
 const { showLoginMenu } = require('./navigation.js');
 const autoAuth = require('./modules/utils/autoAuth.js');
 
 const BotMovement = require('./modules/utils/movement.js');
 const ModuleManager = require('./modules/ModuleManager.js');
 
-// Import các module chức năng
+// Import feature modules
 const CombatManager = require('./modules/features/combatManager.js');
 
 /**
- * Đại diện cho một instance bot độc lập, quản lý vòng đời của chính nó.
+ * Represents an independent bot instance, managing its own lifecycle and emitting events.
+ * @extends EventEmitter
  */
-class BotInstance {
+class BotInstance extends EventEmitter {
   /**
-   * @param {string} name - Tên định danh của bot.
-   * @param {object} config - Đối tượng cấu hình đầy đủ cho bot này.
+   * @param {string} name - The identifier for the bot.
+   * @param {object} config - The full configuration object for this bot.
    */
   constructor(name, config) {
+    super();
     this.name = name;
     this.config = config;
-    this.bot = null; // mineflayer bot instance
+    this.bot = null;
     this.moduleManager = null;
   }
 
   /**
-   * Khởi động bot.
+   * Starts the bot.
    */
   start() {
-    console.log(`[${this.name}] Đang khởi động...`);
+    this.log('Đang khởi động...');
+    this.emit('status', 'connecting');
 
     this.bot = mineflayer.createBot({
       host: this.config.host,
@@ -38,34 +42,33 @@ class BotInstance {
       version: this.config.version || false,
     });
 
-    // Gắn module auto-auth nếu có mật khẩu
     autoAuth(this.bot, this.config);
 
-    // Gắn các listener sự kiện cốt lõi
     this.bot.once('spawn', this.onSpawn.bind(this));
     this.bot.on('kicked', (reason) => this.onDisconnect(`Bị kick: ${reason ? JSON.parse(reason).text : 'Không rõ lý do'}`));
     this.bot.on('end', (reason) => this.onDisconnect(`Mất kết nối: ${reason || 'Không rõ lý do'}`));
-    this.bot.on('error', (err) => console.error(`[${this.name}] Lỗi bot:`, err));
+    this.bot.on('error', (err) => this.log(`Lỗi bot: ${err.message}`));
   }
 
   /**
-   * Dừng bot một cách an toàn.
+   * Safely stops the bot.
    */
   stop() {
-    console.log(`[${this.name}] Đang dừng...`);
+    this.log('Đang dừng...');
     if (this.bot) {
       this.bot.quit();
     }
   }
 
   /**
-   * Xử lý khi bot spawn vào thế giới.
+   * Handles the bot spawning into the world.
    * @private
    */
   onSpawn() {
-    console.log(`[${this.name}] Đã spawn vào server.`);
+    this.log('Đã spawn vào server.');
+    this.emit('status', 'online');
 
-    const loginScriptPath = path.join(__dirname, this.config.loginScript || 'login_manual.txt');
+    const loginScriptPath = path.join(__dirname, '..', this.config.loginScript || 'login_manual.txt');
 
     if (this.config.enableLoginMenu) {
       showLoginMenu(this.bot, loginScriptPath, () => this.initializeModules());
@@ -75,36 +78,48 @@ class BotInstance {
   }
 
   /**
-   * Khởi tạo hệ thống module cho bot này.
+   * Initializes the module system for this bot.
    * @private
    */
   initializeModules() {
-    console.log(`[${this.name}] Đang khởi tạo hệ thống module...`);
+    this.log('Đang khởi tạo hệ thống module...');
 
-    const movementUtil = new BotMovement(this.bot, { movement: this.config.movementOptions });
-    // ModuleManager cần toàn bộ file settings để có thể ghi lại
-    const fullSettings = require('./settings.json');
+    // This is problematic for a UI app. We need a better way to manage settings.
+    // For now, we'll assume settings are passed in config.
+    const fullSettings = this.config.settings || {};
+
     this.moduleManager = new ModuleManager(this.bot, this.name, fullSettings);
 
-    // Đăng ký các module
+    // Register modules
     if (this.config.modules.combatManager) {
+      const movementUtil = new BotMovement(this.bot, { movement: this.config.movementOptions });
       const combatManager = new CombatManager(this.bot, this.config.modules.combatManager, movementUtil);
       this.moduleManager.register('combatManager', combatManager);
     }
 
     this.moduleManager.initializeModules();
 
-    console.log(`[${this.name}] Đã sẵn sàng hoạt động!`);
+    this.log('Đã sẵn sàng hoạt động!');
+    this.emit('status', 'ready');
   }
 
   /**
-   * Xử lý khi mất kết nối.
-   * @param {string} logMessage - Thông điệp để ghi log.
+   * Handles disconnection.
+   * @param {string} logMessage - The message to log.
    * @private
    */
   onDisconnect(logMessage) {
-    console.log(`[${this.name}] ${logMessage}`);
-    // BotManager sẽ xử lý việc khởi động lại nếu cần
+    this.log(logMessage);
+    this.emit('status', 'disconnected');
+  }
+
+  /**
+   * Emits a log message.
+   * @param {string} message - The message to log.
+   */
+  log(message) {
+    console.log(`[${this.name}] ${message}`); // Keep console log for backend debugging
+    this.emit('log', `[${this.name}] ${message}`);
   }
 }
 
