@@ -41,37 +41,44 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    const selectBot = (botName) => {
+    const selectBot = async (botName) => {
         if (selectedBotName === botName) return;
 
         selectedBotName = botName;
         selectedBotNameSpan.textContent = botName;
 
-        // Update selection highlight
         document.querySelectorAll('.bot-item').forEach(item => {
             item.classList.toggle('selected', item.dataset.botName === botName);
         });
 
-        renderModuleControls();
-        logToCli(`Đã chọn bot: ${botName}.`);
+        logToCli(`Đã chọn bot: ${botName}. Đang lấy trạng thái...`);
+        try {
+            const state = await window.api.invoke('get-bot-state', botName);
+            renderModuleControls(state);
+            logToCli(`Đã tải trạng thái của bot ${botName}.`);
+        } catch (error) {
+            logToCli(`Lỗi khi lấy trạng thái của bot ${botName}: ${error.message}`, 'error');
+        }
     };
 
-    const renderModuleControls = () => {
+    const renderModuleControls = (state) => {
         moduleControlsDiv.innerHTML = '';
-        if (!selectedBotName || !botConfigs.bots[selectedBotName]) return;
+        if (!selectedBotName || !botConfigs.bots[selectedBotName] || !state) return;
 
         const botConfig = botConfigs.bots[selectedBotName];
 
-        // Example: Master toggle for the bot itself
-        const botToggle = createModuleControl('bot-master-toggle', 'Bật / Tắt Bot', false, (state) => {
-            window.api.send('toggle-bot', { botName: selectedBotName, state });
+        // Master toggle for the bot itself, based on its live status
+        const isBotRunning = state.botStatus === 'online' || state.botStatus === 'ready' || state.botStatus === 'connecting';
+        const botToggle = createModuleControl('bot-master-toggle', 'Bật / Tắt Bot', isBotRunning, (newState) => {
+            window.api.send('toggle-bot', { botName: selectedBotName, state: newState });
         });
         moduleControlsDiv.appendChild(botToggle);
 
-        // Render toggles for each module in config
+        // Render toggles for each module, based on its live status
         for (const moduleName in botConfig.modules) {
-             const control = createModuleControl(moduleName, `Chế độ ${moduleName}`, false, (state) => {
-                window.api.send('toggle-module', { botName: selectedBotName, moduleName, state });
+             const isModuleEnabled = state.moduleStates[moduleName] || false;
+             const control = createModuleControl(moduleName, `Chế độ ${moduleName}`, isModuleEnabled, (newState) => {
+                window.api.send('toggle-module', { botName: selectedBotName, moduleName, state: newState });
              });
              moduleControlsDiv.appendChild(control);
         }
@@ -110,36 +117,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const statusIcon = botItem.querySelector('.status-icon');
         const statusLabel = botItem.querySelector('.status-label');
-        const masterToggle = document.getElementById(`toggle-${botName}-bot-master-toggle`);
 
-        // Reset classes
+        // Only update the master toggle if this bot is currently selected
+        if (botName === selectedBotName) {
+            const masterToggle = document.getElementById(`toggle-${botName}-bot-master-toggle`);
+            if (masterToggle) {
+                masterToggle.checked = (status === 'online' || status === 'ready' || status === 'connecting');
+            }
+        }
+
         statusIcon.className = 'status-icon';
         statusLabel.className = 'status-label';
 
-        let iconClass, labelClass, labelText, isChecked;
-
+        let iconClass, labelClass, labelText;
         switch(status) {
             case 'online':
             case 'ready':
-                iconClass = 'running'; labelClass = 'running'; labelText = 'Đang Chạy'; isChecked = true;
+                iconClass = 'running'; labelClass = 'running'; labelText = 'Đang Chạy';
                 break;
             case 'connecting':
-                 iconClass = 'waiting'; labelClass = 'waiting'; labelText = 'Kết nối...'; isChecked = true;
+                 iconClass = 'waiting'; labelClass = 'waiting'; labelText = 'Kết nối...';
                 break;
             case 'stopped':
             case 'disconnected':
             default:
-                iconClass = 'disconnected'; labelClass = 'disconnected'; labelText = 'Đã Tắt'; isChecked = false;
+                iconClass = 'disconnected'; labelClass = 'disconnected'; labelText = 'Đã Tắt';
         }
 
         statusIcon.classList.add(iconClass);
         statusLabel.classList.add(labelClass);
         statusLabel.textContent = labelText;
-        statusIcon.innerHTML = `<i class="fa-solid ${status === 'running' ? 'fa-check' : (status === 'connecting' ? 'fa-clock' : 'fa-xmark')}"></i>`;
-
-        if (masterToggle) {
-           masterToggle.checked = isChecked;
-        }
+        statusIcon.innerHTML = `<i class="fa-solid ${iconClass === 'running' ? 'fa-check' : (iconClass === 'waiting' ? 'fa-clock' : 'fa-xmark')}"></i>`;
     };
 
     // --- Event Listeners ---

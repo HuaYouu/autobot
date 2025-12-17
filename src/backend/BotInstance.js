@@ -25,6 +25,7 @@ class BotInstance extends EventEmitter {
     this.config = config;
     this.bot = null;
     this.moduleManager = null;
+    this.currentStatus = 'stopped'; // Thêm trạng thái ban đầu
   }
 
   /**
@@ -32,6 +33,7 @@ class BotInstance extends EventEmitter {
    */
   start() {
     this.log('Đang khởi động...');
+    this.currentStatus = 'connecting';
     this.emit('status', 'connecting');
 
     this.bot = mineflayer.createBot({
@@ -66,6 +68,7 @@ class BotInstance extends EventEmitter {
    */
   onSpawn() {
     this.log('Đã spawn vào server.');
+    this.currentStatus = 'online';
     this.emit('status', 'online');
 
     const loginScriptPath = path.join(__dirname, '..', this.config.loginScript || 'login_manual.txt');
@@ -110,6 +113,7 @@ class BotInstance extends EventEmitter {
    */
   onDisconnect(logMessage) {
     this.log(logMessage);
+    this.currentStatus = 'disconnected';
     this.emit('status', 'disconnected');
   }
 
@@ -120,6 +124,18 @@ class BotInstance extends EventEmitter {
   log(message) {
     console.log(`[${this.name}] ${message}`); // Keep console log for backend debugging
     this.emit('log', `[${this.name}] ${message}`);
+  }
+
+  /**
+   * Lấy trạng thái đầy đủ của bot, bao gồm trạng thái kết nối và trạng thái của các module.
+   * @returns {{botStatus: string, moduleStates: Object<string, boolean>}}
+   */
+  getFullState() {
+    const moduleStates = this.moduleManager ? this.moduleManager.getModuleStates() : {};
+    return {
+      botStatus: this.currentStatus,
+      moduleStates: moduleStates,
+    };
   }
 }
 

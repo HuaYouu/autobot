@@ -68,6 +68,18 @@ ipcMain.handle('get-bot-configs', async () => {
   return botConfigs || await loadBotConfigs();
 });
 
+ipcMain.handle('get-bot-state', (event, botName) => {
+    const botInstance = botManager.runningBots.get(botName);
+    if (botInstance) {
+        return botInstance.getFullState();
+    }
+    // Nếu bot không chạy, trả về trạng thái mặc định
+    return {
+        botStatus: 'stopped',
+        moduleStates: {},
+    };
+});
+
 ipcMain.on('toggle-bot', (event, { botName, state }) => {
     console.log(`Main: Received toggle-bot for ${botName} to ${state}`);
     if (state) {

@@ -123,6 +123,18 @@ class ModuleManager {
   getModule(name) {
     return this.modules.get(name);
   }
+
+  /**
+   * Lấy trạng thái (bật/tắt) của tất cả các module đã đăng ký.
+   * @returns {Object<string, boolean>} Một đối tượng với tên module là key và trạng thái là value.
+   */
+  getModuleStates() {
+    const states = {};
+    for (const [name, moduleInstance] of this.modules.entries()) {
+      states[name] = moduleInstance.isEnabled;
+    }
+    return states;
+  }
 }
 
 module.exports = ModuleManager;
