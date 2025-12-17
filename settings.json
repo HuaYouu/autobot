@@ -8,7 +8,7 @@
       "auth": "offline",
       "version": "1.21.1",
       "password": "your_password_here",
-      "enableLoginMenu": true,
+      "enableLoginMenu": false,
       "loginScript": "login_manual.txt",
       "movementOptions": {
         "goalRadius": 2,
@@ -19,9 +19,9 @@
       },
       "modules": {
         "combatManager": {
-          "enabled": true,
+          "enabled": false,
           "options": {
-            "mode": "patrol",
+            "mode": "aggressive",
             "guardianTarget": "Player1",
             "retreatHealthLevel": 10,
             "patrolArea": [
@@ -31,7 +31,7 @@
               { "x": 120, "y": 64, "z": 100 }
             ],
             "blacklist": ["Zombie", "Skeleton", "Creeper"],
-            "whitelist": ["Player1", "Bot2"],
+            "whitelist": ["Player1", "Bot"],
             "submodules": {
               "targeting": true,
               "movement": true,
@@ -58,8 +58,27 @@
       },
       "modules": {
         "combatManager": {
-          "enabled": false,
-          "options": {}
+          "enabled": true,
+          "options": {
+            "mode": "guardian",
+            "guardianTarget": "HuaYou",
+            "retreatHealthLevel": 10,
+            "patrolArea": [
+              { "x": 100, "y": 64, "z": 100 },
+              { "x": 100, "y": 64, "z": 120 },
+              { "x": 120, "y": 64, "z": 120 },
+              { "x": 120, "y": 64, "z": 100 }
+            ],
+            "blacklist": ["Zombie", "Skeleton", "Creeper"],
+            "whitelist": ["HuaYou", "Bot2"],
+            "submodules": {
+              "targeting": true,
+              "movement": true,
+              "attack": true,
+              "defense": false,
+              "support": false
+            }
+          }
         }
       }
     }
