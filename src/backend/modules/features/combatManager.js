@@ -130,42 +130,29 @@ class CombatManager {
   guardianLogic() {
     const owner = this.bot.players[this.config.guardianTarget]?.entity;
     if (!owner) {
-      // console.log(`[${this.bot.username}] Không tìm thấy người bảo vệ: ${this.config.guardianTarget}`);
       return;
     }
-    // Đi theo chủ nhân ở khoảng cách 5 block
-    this.bot.pathfinder.setGoal(new GoalFollow(owner, 5), true);
+    // Use the abstraction layer to follow the target
+    this.movementUtil.follow(owner);
   }
 
   patrolLogic() {
     const patrolPoints = this.config.patrolArea || [];
-    if (patrolPoints.length === 0 || this.state.isMovingToPatrolPoint) return;
+    if (patrolPoints.length === 0 || this.movementUtil.isMoving) return;
 
-    let targetPoint = patrolPoints[this.state.patrolIndex];
-    let goal = { x: targetPoint.x, y: targetPoint.y, z: targetPoint.z };
+    const targetPoint = patrolPoints[this.state.patrolIndex];
 
-    // Nếu bot đang đứng yên và đã ở gần một điểm, hãy chuyển ngay sang điểm tiếp theo.
-    if (this.bot.entity.position.distanceTo(goal) < 3) {
-      this.state.patrolIndex = (this.state.patrolIndex + 1) % patrolPoints.length;
-      targetPoint = patrolPoints[this.state.patrolIndex];
-      goal = { x: targetPoint.x, y: targetPoint.y, z: targetPoint.z };
-      console.log(`[${this.bot.username}] Đã ở gần điểm, chuyển sang điểm tuần tra tiếp theo: ${this.state.patrolIndex}`);
-    }
-
-    this.state.isMovingToPatrolPoint = true;
-    console.log(`[${this.bot.username}] Đang di chuyển đến điểm tuần tra ${this.state.patrolIndex} tại (${goal.x}, ${goal.y}, ${goal.z})`);
-
-    this.movementUtil.goTo(goal.x, goal.y, goal.z)
+    this.movementUtil.moveTo(targetPoint.x, targetPoint.y, targetPoint.z)
       .then(() => {
         console.log(`[${this.bot.username}] Đã đến điểm tuần tra ${this.state.patrolIndex}.`);
         this.state.patrolIndex = (this.state.patrolIndex + 1) % patrolPoints.length;
-        this.state.isMovingToPatrolPoint = false;
       })
       .catch((err) => {
-        console.error(`[${this.bot.username}] Lỗi khi di chuyển đến điểm tuần tra:`, err.message);
-        this.state.isMovingToPatrolPoint = false;
-        // Đợi một chút trước khi thử lại để tránh spam
-        setTimeout(() => {}, 2500);
+        console.error(`[${this.bot.username}] Không thể đến điểm tuần tra, thử lại sau ít giây.`);
+        // Simple cooldown to prevent spamming failed movements
+        setTimeout(() => {
+            this.state.patrolIndex = (this.state.patrolIndex + 1) % patrolPoints.length; // Try next point
+        }, 5000);
       });
   }
 
@@ -239,7 +226,7 @@ class CombatManager {
         0,
         (Math.random() - 0.5) * 60
       );
-      this.movementUtil.goTo(safePos.x, safePos.y, safePos.z).catch(() => {
+      this.movementUtil.moveTo(safePos.x, safePos.y, safePos.z).catch(() => {
           this.state.isRetreating = false; // Thất bại, thử lại lần sau
       });
       return true;
@@ -260,8 +247,7 @@ class CombatManager {
     if (this.config.mode !== oldMode) {
       console.log(`[${this.bot.username}] Chế độ chiến đấu đã thay đổi từ "${oldMode}" thành "${this.config.mode}".`);
       // Dừng hành động hiện tại để hành động mới có thể bắt đầu trong tick tiếp theo
-      this.bot.pathfinder.stop();
-      this.state.isMovingToPatrolPoint = false;
+      this.movementUtil.stop();
     }
   }
 }

@@ -10,27 +10,17 @@ const ModuleManager = require('./modules/ModuleManager.js');
 // Import feature modules
 const CombatManager = require('./modules/features/combatManager.js');
 
-/**
- * Represents an independent bot instance, managing its own lifecycle and emitting events.
- * @extends EventEmitter
- */
 class BotInstance extends EventEmitter {
-  /**
-   * @param {string} name - The identifier for the bot.
-   * @param {object} config - The full configuration object for this bot.
-   */
   constructor(name, config) {
     super();
     this.name = name;
     this.config = config;
     this.bot = null;
     this.moduleManager = null;
-    this.currentStatus = 'stopped'; // Thêm trạng thái ban đầu
+    this.movementUtil = null;
+    this.currentStatus = 'stopped';
   }
 
-  /**
-   * Starts the bot.
-   */
   start() {
     this.log('Đang khởi động...');
     this.currentStatus = 'connecting';
@@ -44,6 +34,13 @@ class BotInstance extends EventEmitter {
       version: this.config.version || false,
     });
 
+    const movementEvents = ['movement_started', 'movement_stopped', 'movement_reached', 'movement_failed'];
+    movementEvents.forEach(eventName => {
+      this.bot.on(eventName, (err) => {
+        this.emit('movement-update', { event: eventName, error: err ? err.message : null });
+      });
+    });
+
     autoAuth(this.bot, this.config);
 
     this.bot.once('spawn', this.onSpawn.bind(this));
@@ -52,9 +49,6 @@ class BotInstance extends EventEmitter {
     this.bot.on('error', (err) => this.log(`Lỗi bot: ${err.message}`));
   }
 
-  /**
-   * Safely stops the bot.
-   */
   stop() {
     this.log('Đang dừng...');
     if (this.bot) {
@@ -62,17 +56,16 @@ class BotInstance extends EventEmitter {
     }
   }
 
-  /**
-   * Handles the bot spawning into the world.
-   * @private
-   */
   onSpawn() {
     this.log('Đã spawn vào server.');
     this.currentStatus = 'online';
     this.emit('status', 'online');
 
-    const loginScriptPath = path.join(__dirname, '..', this.config.loginScript || 'login_manual.txt');
+    // Initialize utilities that require the bot to be spawned
+    this.movementUtil = new BotMovement(this.bot);
+    this.movementUtil.configure();
 
+    const loginScriptPath = path.join(__dirname, '..', this.config.loginScript || 'login_manual.txt');
     if (this.config.enableLoginMenu) {
       showLoginMenu(this.bot, loginScriptPath, () => this.initializeModules());
     } else {
@@ -80,62 +73,54 @@ class BotInstance extends EventEmitter {
     }
   }
 
-  /**
-   * Initializes the module system for this bot.
-   * @private
-   */
   initializeModules() {
     this.log('Đang khởi tạo hệ thống module...');
-
-    // This is problematic for a UI app. We need a better way to manage settings.
-    // For now, we'll assume settings are passed in config.
     const fullSettings = this.config.settings || {};
-
     this.moduleManager = new ModuleManager(this.bot, this.name, fullSettings);
 
-    // Register modules
     if (this.config.modules.combatManager) {
-      const movementUtil = new BotMovement(this.bot, { movement: this.config.movementOptions });
-      const combatManager = new CombatManager(this.bot, this.config.modules.combatManager, movementUtil);
+      const combatManager = new CombatManager(this.bot, this.config.modules.combatManager, this.movementUtil);
       this.moduleManager.register('combatManager', combatManager);
     }
 
     this.moduleManager.initializeModules();
-
     this.log('Đã sẵn sàng hoạt động!');
     this.emit('status', 'ready');
   }
 
-  /**
-   * Handles disconnection.
-   * @param {string} logMessage - The message to log.
-   * @private
-   */
   onDisconnect(logMessage) {
     this.log(logMessage);
     this.currentStatus = 'disconnected';
     this.emit('status', 'disconnected');
   }
 
-  /**
-   * Emits a log message.
-   * @param {string} message - The message to log.
-   */
   log(message) {
-    console.log(`[${this.name}] ${message}`); // Keep console log for backend debugging
+    console.log(`[${this.name}] ${message}`);
     this.emit('log', `[${this.name}] ${message}`);
   }
 
-  /**
-   * Lấy trạng thái đầy đủ của bot, bao gồm trạng thái kết nối và trạng thái của các module.
-   * @returns {{botStatus: string, moduleStates: Object<string, boolean>}}
-   */
   getFullState() {
     const moduleStates = this.moduleManager ? this.moduleManager.getModuleStates() : {};
     return {
       botStatus: this.currentStatus,
       moduleStates: moduleStates,
     };
+  }
+
+  moveTo(x, y, z) {
+    if (this.movementUtil) {
+      this.movementUtil.moveTo(x, y, z).catch(err => this.log(`Movement failed: ${err.message}`));
+    } else {
+      this.log('Movement utility is not initialized.');
+    }
+  }
+
+  stopMovement() {
+    if (this.movementUtil) {
+      this.movementUtil.stop();
+    } else {
+      this.log('Movement utility is not initialized.');
+    }
   }
 }
 

@@ -54,6 +54,17 @@ app.whenReady().then(async () => {
     }
   });
 
+  // This is a bit tricky as botInstance events are not bubbled up by default.
+  // A better implementation would involve the BotManager re-emitting these.
+  // For now, we will add listeners when the bot is started. This is done in startBot in BotManager.
+  // Let's modify BotManager to bubble up these events.
+
+  botManager.on('bot-movement-update', (update) => {
+    if (mainWindow) {
+      mainWindow.webContents.send('bot-movement-update', update);
+    }
+  });
+
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
@@ -116,4 +127,12 @@ ipcMain.on('send-command', (event, { botName, command }) => {
         console.log(message);
         mainWindow.webContents.send('log-message', message);
     }
+});
+
+ipcMain.on('move-to-coordinates', (event, { botName, coords }) => {
+    botManager.moveTo(botName, coords);
+});
+
+ipcMain.on('stop-movement', (event, { botName }) => {
+    botManager.stopMovement(botName);
 });

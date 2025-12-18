@@ -1,86 +1,98 @@
-// Import các thư viện cần thiết
-const { pathfinder, Movements } = require('mineflayer-pathfinder');
-const { GoalNear } = require('mineflayer-pathfinder').goals;
-const mcData = require('minecraft-data');
+const { pathfinder } = require('mineflayer-pathfinder');
+const { GoalBlock } = require('mineflayer-pathfinder').goals;
+const { Movements } = require('mineflayer-movement');
 
 /**
- * Lớp quản lý di chuyển của bot, kết hợp pathfinder và movement.
+ * Utility module for bot movement using mineflayer-pathfinder.
+ * This ensures the bot can navigate to specific coordinates accurately.
  */
 class BotMovement {
   /**
-   * Khởi tạo module di chuyển.
-   * @param {import('mineflayer').Bot} bot - Instance của bot.
-   * @param {object} settings - Đối tượng cấu hình từ settings.json.
+   * @param {import('mineflayer').Bot} bot - The bot instance.
    */
-  constructor(bot, settings) {
+  constructor(bot) {
     this.bot = bot;
-    this.settings = settings;
+    this.isMoving = false;
 
-    // Tải plugin pathfinder vào bot
+    // Load the pathfinder plugin
     this.bot.loadPlugin(pathfinder);
-
-    // Lấy dữ liệu phiên bản Minecraft của bot
-    const defaultMove = new Movements(this.bot, mcData(bot.version));
-
-    // Cấu hình các hành vi di chuyển dựa trên settings.json
-    defaultMove.canDig = this.settings.movement.canBreakBlocks;
-    defaultMove.canPlace = this.settings.movement.canPlaceBlocks;
-    defaultMove.allowSprinting = this.settings.movement.allowSprinting;
-    defaultMove.allowParkour = this.settings.movement.allowParkour;
-
-    // Gán cấu hình di chuyển cho pathfinder
-    this.bot.pathfinder.setMovements(defaultMove);
-    console.log('Module di chuyển đã được khởi tạo và cấu hình.');
   }
 
   /**
-   * Di chuyển bot đến một tọa độ cụ thể.
-   * @param {number} x - Tọa độ X.
-   * @param {number} y - Tọa độ Y.
-   * @param {number} z - Tọa độ Z.
-   * @returns {Promise<void>} Một Promise sẽ resolve khi đến nơi hoặc reject khi thất bại.
+   * Configures the pathfinder's movement settings. Must be called after the bot has spawned.
    */
-  goTo(x, y, z) {
+  configure() {
+    const defaultMove = new Movements(this.bot);
+    this.bot.pathfinder.setMovements(defaultMove);
+  }
+
+  /**
+   * Moves the bot to the specified coordinates.
+   * @param {number} x - The x-coordinate.
+   * @param {number} y - The y-coordinate.
+   * @param {number} z - The z-coordinate.
+   * @returns {Promise<void>} A promise that resolves when the goal is reached or movement is interrupted.
+   */
+  moveTo(x, y, z) {
     return new Promise((resolve, reject) => {
-      // Tạo mục tiêu: đến gần tọa độ trong bán kính đã cấu hình
-      const goal = new GoalNear(x, y, z, this.settings.movement.goalRadius);
+      if (this.isMoving) {
+        this.stop();
+      }
+      this.isMoving = true;
+      this.bot.emit('movement_started');
 
-      // Bắt đầu di chuyển đến mục tiêu
-      this.bot.pathfinder.setGoal(goal, true); // `true` để di chuyển theo đường đi thông minh
+      const goal = new GoalBlock(x, y, z);
+      this.bot.pathfinder.setGoal(goal, true);
 
-      // Hàm xử lý khi đến nơi
-      const onGoalReached = () => {
-        cleanupListeners();
-        resolve();
-      };
-
-      // Hàm xử lý khi không tìm được đường
-      const onPathUpdate = (results) => {
-        if (results.status === 'noPath') {
-          console.error(`Không tìm thấy đường đi đến ${x}, ${y}, ${z}.`);
-          cleanupListeners();
-          this.bot.pathfinder.stop(); // Dừng tìm đường
-          reject(new Error('Không tìm thấy đường đi.'));
+      // Listen for goal completion or interruption
+      const onGoalReached = () => cleanupAndResolve();
+      const onPathReset = (reason) => {
+        if (reason !== 'goal_updated') {
+            cleanupAndReject(new Error('Path was reset: ' + reason));
         }
       };
 
-      // Hàm dọn dẹp các listener
-      const cleanupListeners = () => {
+      const cleanup = () => {
         this.bot.removeListener('goal_reached', onGoalReached);
-        this.bot.removeListener('path_update', onPathUpdate);
+        this.bot.removeListener('path_reset', onPathReset);
+        this.isMoving = false;
       };
 
-      // Gán các listener cho sự kiện
+      const cleanupAndResolve = () => {
+        cleanup();
+        this.bot.emit('movement_reached');
+        resolve();
+      };
+
+      const cleanupAndReject = (err) => {
+        cleanup();
+        this.bot.emit('movement_failed', err);
+        reject(err);
+      };
+
       this.bot.once('goal_reached', onGoalReached);
-      this.bot.on('path_update', onPathUpdate); // Dùng 'on' để bắt các cập nhật trạng thái
+      this.bot.on('path_reset', onPathReset); // Use 'on' because it can be reset for multiple reasons
     });
   }
 
   /**
-   * Hủy bỏ mọi hoạt động di chuyển hiện tại.
+   * Stops any current pathfinding movement.
    */
   stop() {
+    if (!this.isMoving) return;
     this.bot.pathfinder.stop();
+    this.isMoving = false;
+    this.bot.emit('movement_stopped');
+  }
+
+  /**
+   * Makes the bot follow a target entity.
+   * @param {import('prismarine-entity').Entity} targetEntity - The entity to follow.
+   */
+  follow(targetEntity) {
+    const { GoalFollow } = require('mineflayer-pathfinder').goals;
+    const goal = new GoalFollow(targetEntity, 5); // Follow from 5 blocks away
+    this.bot.pathfinder.setGoal(goal, true); // `true` to keep following
   }
 }
 

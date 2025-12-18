@@ -34,6 +34,11 @@ class BotManager extends EventEmitter {
       this.emit('bot-status-update', { botName: name, status });
     });
 
+    // Bubble up movement events from the instance
+    botInstance.on('movement-update', (update) => {
+        this.emit('bot-movement-update', { botName: name, ...update });
+    });
+
     this.runningBots.set(name, botInstance);
     botInstance.start();
   }
@@ -114,6 +119,35 @@ class BotManager extends EventEmitter {
     }
     this.emit('log', `[BotManager] Requesting to update options for module "${moduleName}" for bot "${botName}"...`);
     botInstance.moduleManager.updateModuleOptions(moduleName, newOptions);
+  }
+
+  /**
+   * Yêu cầu một bot di chuyển đến tọa độ cụ thể.
+   * @param {string} botName - Tên của bot.
+   * @param {{x: number, y: number, z: number}} coords - Tọa độ.
+   */
+  moveTo(botName, coords) {
+    const botInstance = this.runningBots.get(botName);
+    if (!botInstance) {
+      this.emit('log', `[BotManager] Bot "${botName}" is not running.`);
+      return;
+    }
+    this.emit('log', `[BotManager] Bot "${botName}" moving to ${coords.x}, ${coords.y}, ${coords.z}`);
+    botInstance.moveTo(coords.x, coords.y, coords.z);
+  }
+
+  /**
+   * Yêu cầu một bot dừng di chuyển.
+   * @param {string} botName - Tên của bot.
+   */
+  stopMovement(botName) {
+    const botInstance = this.runningBots.get(botName);
+    if (!botInstance) {
+      this.emit('log', `[BotManager] Bot "${botName}" is not running.`);
+      return;
+    }
+    this.emit('log', `[BotManager] Stopping movement for bot "${botName}"`);
+    botInstance.stopMovement();
   }
 }
 

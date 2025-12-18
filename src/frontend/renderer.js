@@ -65,14 +65,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!selectedBotName || !botConfigs.bots[selectedBotName] || !state) return;
         const botConfig = botConfigs.bots[selectedBotName];
 
-        // Master toggle
+        // --- Movement Control UI ---
+        const movementControl = createMovementControl();
+        moduleControlsDiv.appendChild(movementControl);
+
+        // --- Master Toggle ---
         const isBotRunning = ['online', 'ready', 'connecting'].includes(state.botStatus);
         const botToggle = createModuleControl('bot-master-toggle', 'Bật / Tắt Bot', isBotRunning, null, (newState) => {
             window.api.send('toggle-bot', { botName: selectedBotName, state: newState });
         });
         moduleControlsDiv.appendChild(botToggle);
 
-        // Module toggles
+        // --- Module Toggles ---
         for (const moduleName in botConfig.modules) {
             const moduleConfig = botConfig.modules[moduleName];
             const isModuleEnabled = state.moduleStates[moduleName] || false;
@@ -89,25 +93,55 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    const createMovementControl = () => {
+        const div = document.createElement('div');
+        div.id = 'movement-control';
+        div.innerHTML = `
+            <label>Điều Khiển Di Chuyển</label>
+            <div class="coords-inputs">
+                <input type="number" id="coord-x" placeholder="X">
+                <input type="number" id="coord-y" placeholder="Y">
+                <input type="number" id="coord-z" placeholder="Z">
+            </div>
+            <button id="move-btn">Di Chuyển</button>
+        `;
+
+        const moveBtn = div.querySelector('#move-btn');
+        moveBtn.addEventListener('click', () => {
+            if (moveBtn.classList.contains('moving')) {
+                // Stop movement
+                window.api.send('stop-movement', { botName: selectedBotName });
+            } else {
+                // Start movement
+                const x = parseFloat(document.getElementById('coord-x').value);
+                const y = parseFloat(document.getElementById('coord-y').value);
+                const z = parseFloat(document.getElementById('coord-z').value);
+                if (isNaN(x) || isNaN(y) || isNaN(z)) {
+                    logToCli('Lỗi: Tọa độ không hợp lệ.', 'error');
+                    return;
+                }
+                window.api.send('move-to-coordinates', { botName: selectedBotName, coords: { x, y, z } });
+            }
+        });
+
+        return div;
+    };
+
     const createModuleControl = (id, label, isEnabled, options, onToggle) => {
         const controlDiv = document.createElement('div');
         controlDiv.className = 'module-control';
-
         const header = document.createElement('div');
         header.className = 'module-control-header';
-
         const labelSpan = document.createElement('span');
         labelSpan.className = 'module-label';
         labelSpan.innerHTML = `<i class="fa-solid fa-shield-halved"></i> ${label}`;
         header.appendChild(labelSpan);
-
         if (options) {
             const settingsBtn = document.createElement('button');
             settingsBtn.className = 'settings-btn';
             settingsBtn.innerHTML = '<i class="fa-solid fa-caret-down"></i>';
             header.appendChild(settingsBtn);
         }
-
         const switchLabel = document.createElement('label');
         switchLabel.className = 'switch';
         const checkbox = document.createElement('input');
@@ -118,25 +152,19 @@ document.addEventListener('DOMContentLoaded', () => {
         switchLabel.appendChild(checkbox);
         switchLabel.appendChild(document.createElement('span')).className = 'slider round';
         header.appendChild(switchLabel);
-
         controlDiv.appendChild(header);
-
         if (options) {
             const content = document.createElement('div');
             content.className = 'collapsible-content';
-
             for(const key in options) {
                 content.appendChild(createOptionControl(id, key, options[key]));
             }
             controlDiv.appendChild(content);
-
-            const settingsBtnElem = header.querySelector('.settings-btn');
-            settingsBtnElem.addEventListener('click', () => {
+            header.querySelector('.settings-btn').addEventListener('click', () => {
                 content.classList.toggle('show');
-                settingsBtnElem.classList.toggle('open');
+                header.querySelector('.settings-btn').classList.toggle('open');
             });
         }
-
         return controlDiv;
     };
 
@@ -146,9 +174,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const label = document.createElement('label');
         label.textContent = key;
         div.appendChild(label);
-
         let input;
-        if (key === 'mode' && moduleName === 'combatManager') { // Specific dropdown for combat mode
+        if (key === 'mode' && moduleName === 'combatManager') {
             input = document.createElement('select');
             ['guardian', 'aggressive', 'patrol'].forEach(mode => {
                 const option = document.createElement('option');
@@ -165,22 +192,19 @@ document.addEventListener('DOMContentLoaded', () => {
             input.type = typeof value === 'number' ? 'number' : 'text';
             input.value = value;
         }
-
         input.addEventListener('input', () => {
             clearTimeout(debounceTimers[key]);
             debounceTimers[key] = setTimeout(() => {
                 let newValue = input.value;
                 if (Array.isArray(value)) newValue = input.value.split('\n').filter(v => v);
                 if (typeof value === 'number') newValue = parseFloat(input.value);
-
                 window.api.send('update-module-options', {
                     botName: selectedBotName,
                     moduleName,
                     newOptions: { [key]: newValue }
                 });
-            }, 500); // Debounce changes
+            }, 500);
         });
-
         div.appendChild(input);
         return div;
     };
@@ -188,28 +212,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const updateBotStatus = (botName, status) => {
         const botItem = botListDiv.querySelector(`.bot-item[data-bot-name="${botName}"]`);
         if (!botItem) return;
-
         const statusIcon = botItem.querySelector('.status-icon');
         const statusLabel = botItem.querySelector('.status-label');
-
         if (botName === selectedBotName) {
             const masterToggle = document.getElementById(`toggle-${botName}-bot-master-toggle`);
             if (masterToggle) {
                 masterToggle.checked = ['online', 'ready', 'connecting'].includes(status);
             }
         }
-
         statusIcon.className = 'status-icon';
         statusLabel.className = 'status-label';
-
         let iconClass, labelClass, labelText;
         switch(status) {
-            case 'online': case 'ready':
-                iconClass = 'running'; labelClass = 'running'; labelText = 'Đang Chạy'; break;
-            case 'connecting':
-                iconClass = 'waiting'; labelClass = 'waiting'; labelText = 'Kết nối...'; break;
-            default:
-                iconClass = 'disconnected'; labelClass = 'disconnected'; labelText = 'Đã Tắt';
+            case 'online': case 'ready': iconClass = 'running'; labelClass = 'running'; labelText = 'Đang Chạy'; break;
+            case 'connecting': iconClass = 'waiting'; labelClass = 'waiting'; labelText = 'Kết nối...'; break;
+            default: iconClass = 'disconnected'; labelClass = 'disconnected'; labelText = 'Đã Tắt';
         }
         statusIcon.classList.add(iconClass);
         statusLabel.classList.add(labelClass);
@@ -217,13 +234,31 @@ document.addEventListener('DOMContentLoaded', () => {
         statusIcon.innerHTML = `<i class="fa-solid ${iconClass === 'running' ? 'fa-check' : (iconClass === 'waiting' ? 'fa-clock' : 'fa-xmark')}"></i>`;
     };
 
+    const handleMovementUpdate = ({ botName, event }) => {
+        if (botName !== selectedBotName) return;
+        const moveBtn = document.getElementById('move-btn');
+        if (!moveBtn) return;
+
+        switch(event) {
+            case 'movement_started':
+                moveBtn.textContent = 'Dừng';
+                moveBtn.classList.add('moving');
+                moveBtn.disabled = false;
+                break;
+            case 'movement_stopped':
+            case 'movement_reached':
+            case 'movement_failed':
+                moveBtn.textContent = 'Di Chuyển';
+                moveBtn.classList.remove('moving');
+                moveBtn.disabled = false;
+                break;
+        }
+    };
+
     const handleSendCommand = () => {
         const command = cliInputField.value.trim();
         if (!command) return;
-        if (!selectedBotName) {
-            logToCli('Lỗi: Vui lòng chọn một bot trước khi gửi lệnh.', 'error');
-            return;
-        }
+        if (!selectedBotName) { logToCli('Lỗi: Vui lòng chọn một bot trước khi gửi lệnh.', 'error'); return; }
         window.api.send('send-command', { botName: selectedBotName, command });
         cliInputField.value = '';
     };
@@ -233,6 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.api.on('log-message', logToCli);
     window.api.on('bot-status-update', ({ botName, status }) => updateBotStatus(botName, status));
+    window.api.on('bot-movement-update', handleMovementUpdate);
 
     const initialize = async () => {
         logToCli('Đang tải cấu hình bot...');
