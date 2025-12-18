@@ -21,6 +21,47 @@ class ModuleManager {
   }
 
   /**
+   * Cập nhật các tùy chọn cho một module cụ thể và lưu vào settings.json.
+   * @param {string} moduleName - Tên của module.
+   * @param {object} newOptions - Các tùy chọn mới.
+   */
+  async updateModuleOptions(moduleName, newOptions) {
+    const moduleInstance = this.modules.get(moduleName);
+    if (!moduleInstance) {
+      console.error(`Không tìm thấy module có tên "${moduleName}" để cập nhật tùy chọn.`);
+      return;
+    }
+
+    // 1. Cập nhật hành vi của bot trong thời gian thực
+    if (typeof moduleInstance.updateOptions === 'function') {
+      moduleInstance.updateOptions(newOptions);
+    } else {
+      console.warn(`Module "${moduleName}" không có phương thức updateOptions.`);
+      // Vẫn tiếp tục để lưu vào file
+    }
+
+    // 2. Lưu thay đổi vào file settings.json
+    try {
+      const currentSettings = JSON.parse(await fs.readFile(this.settingsPath, 'utf8'));
+
+      if (currentSettings.bots[this.botName]?.modules?.[moduleName]) {
+        // Hợp nhất các tùy chọn mới vào các tùy chọn hiện có
+        const existingOptions = currentSettings.bots[this.botName].modules[moduleName].options || {};
+        currentSettings.bots[this.botName].modules[moduleName].options = { ...existingOptions, ...newOptions };
+      } else {
+        console.warn(`[${this.botName}] Không tìm thấy cấu hình cho module "${moduleName}" trong settings.json.`);
+        return;
+      }
+
+      await fs.writeFile(this.settingsPath, JSON.stringify(currentSettings, null, 2));
+      console.log(`Đã cập nhật tùy chọn của module "${moduleName}" trong settings.json.`);
+      this.settings = currentSettings; // Cập nhật bộ nhớ đệm
+    } catch (error) {
+      console.error(`Không thể ghi tùy chọn mới vào file settings.json:`, error);
+    }
+  }
+
+  /**
    * Đăng ký một module chức năng.
    * @param {string} name - Tên của module (ví dụ: "movementController").
    * @param {object} moduleInstance - Instance của module.

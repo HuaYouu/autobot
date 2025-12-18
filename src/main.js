@@ -100,6 +100,11 @@ ipcMain.on('toggle-module', (event, { botName, moduleName, state }) => {
     botManager.toggleModule(botName, moduleName, state);
 });
 
+ipcMain.on('update-module-options', (event, { botName, moduleName, newOptions }) => {
+    console.log(`Main: Received update-module-options for ${botName}, ${moduleName}`);
+    botManager.updateModuleOptions(botName, moduleName, newOptions);
+});
+
 ipcMain.on('send-command', (event, { botName, command }) => {
     console.log(`Main: Received command for ${botName}: ${command}`);
     const botInstance = botManager.runningBots.get(botName);

@@ -99,6 +99,22 @@ class BotManager extends EventEmitter {
     this.emit('log', `[BotManager] Requesting to ${state ? 'enable' : 'disable'} module "${moduleName}" for bot "${botName}"...`);
     botInstance.moduleManager.toggle(moduleName, state);
   }
+
+  /**
+   * Cập nhật các tùy chọn cho một module của một bot cụ thể.
+   * @param {string} botName - Tên của bot.
+   * @param {string} moduleName - Tên của module.
+   * @param {object} newOptions - Các tùy chọn mới.
+   */
+  updateModuleOptions(botName, moduleName, newOptions) {
+    const botInstance = this.runningBots.get(botName);
+    if (!botInstance || !botInstance.moduleManager) {
+      this.emit('log', `[BotManager] Bot "${botName}" is not ready to update module options.`);
+      return;
+    }
+    this.emit('log', `[BotManager] Requesting to update options for module "${moduleName}" for bot "${botName}"...`);
+    botInstance.moduleManager.updateModuleOptions(moduleName, newOptions);
+  }
 }
 
 module.exports = BotManager;

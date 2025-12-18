@@ -1,7 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 // Whitelist of valid channels for security
-const validSendChannels = ['toggle-bot', 'toggle-module', 'send-command'];
+const validSendChannels = ['toggle-bot', 'toggle-module', 'send-command', 'update-module-options'];
 const validReceiveChannels = ['log-message', 'bot-status-update'];
 const validHandleChannels = ['get-bot-configs', 'get-bot-state'];
 

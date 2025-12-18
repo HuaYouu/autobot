@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- State ---
     let botConfigs = null;
     let selectedBotName = null;
+    let debounceTimers = {};
 
     // --- Helper Functions ---
     const logToCli = (message, type = 'system') => {
@@ -21,12 +22,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const renderBotList = () => {
-        botListDiv.innerHTML = ''; // Clear current list
+        botListDiv.innerHTML = '';
         if (!botConfigs || !botConfigs.bots) {
             logToCli('Không tìm thấy cấu hình bot trong settings.json.', 'error');
             return;
         }
-
         for (const botName in botConfigs.bots) {
             const botItem = document.createElement('div');
             botItem.className = 'bot-item';
@@ -43,7 +43,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const selectBot = async (botName) => {
         if (selectedBotName === botName) return;
-
         selectedBotName = botName;
         selectedBotNameSpan.textContent = botName;
 
@@ -64,51 +63,126 @@ document.addEventListener('DOMContentLoaded', () => {
     const renderModuleControls = (state) => {
         moduleControlsDiv.innerHTML = '';
         if (!selectedBotName || !botConfigs.bots[selectedBotName] || !state) return;
-
         const botConfig = botConfigs.bots[selectedBotName];
 
-        // Master toggle for the bot itself, based on its live status
-        const isBotRunning = state.botStatus === 'online' || state.botStatus === 'ready' || state.botStatus === 'connecting';
-        const botToggle = createModuleControl('bot-master-toggle', 'Bật / Tắt Bot', isBotRunning, (newState) => {
+        // Master toggle
+        const isBotRunning = ['online', 'ready', 'connecting'].includes(state.botStatus);
+        const botToggle = createModuleControl('bot-master-toggle', 'Bật / Tắt Bot', isBotRunning, null, (newState) => {
             window.api.send('toggle-bot', { botName: selectedBotName, state: newState });
         });
         moduleControlsDiv.appendChild(botToggle);
 
-        // Render toggles for each module, based on its live status
+        // Module toggles
         for (const moduleName in botConfig.modules) {
-             const isModuleEnabled = state.moduleStates[moduleName] || false;
-             const control = createModuleControl(moduleName, `Chế độ ${moduleName}`, isModuleEnabled, (newState) => {
-                window.api.send('toggle-module', { botName: selectedBotName, moduleName, state: newState });
-             });
-             moduleControlsDiv.appendChild(control);
+            const moduleConfig = botConfig.modules[moduleName];
+            const isModuleEnabled = state.moduleStates[moduleName] || false;
+            const hasOptions = moduleConfig.options && Object.keys(moduleConfig.options).length > 0;
+
+            const control = createModuleControl(
+                moduleName, `Chế độ ${moduleName}`, isModuleEnabled,
+                hasOptions ? moduleConfig.options : null,
+                (newState) => {
+                    window.api.send('toggle-module', { botName: selectedBotName, moduleName, state: newState });
+                }
+            );
+            moduleControlsDiv.appendChild(control);
         }
     };
 
-    const createModuleControl = (id, label, isChecked, onChange) => {
+    const createModuleControl = (id, label, isEnabled, options, onToggle) => {
         const controlDiv = document.createElement('div');
         controlDiv.className = 'module-control';
 
+        const header = document.createElement('div');
+        header.className = 'module-control-header';
+
         const labelSpan = document.createElement('span');
-        labelSpan.textContent = label;
+        labelSpan.className = 'module-label';
+        labelSpan.innerHTML = `<i class="fa-solid fa-shield-halved"></i> ${label}`;
+        header.appendChild(labelSpan);
+
+        if (options) {
+            const settingsBtn = document.createElement('button');
+            settingsBtn.className = 'settings-btn';
+            settingsBtn.innerHTML = '<i class="fa-solid fa-caret-down"></i>';
+            header.appendChild(settingsBtn);
+        }
 
         const switchLabel = document.createElement('label');
         switchLabel.className = 'switch';
-
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
-        checkbox.checked = isChecked;
+        checkbox.checked = isEnabled;
         checkbox.id = `toggle-${selectedBotName}-${id}`;
-        checkbox.addEventListener('change', (e) => onChange(e.target.checked));
-
-        const sliderSpan = document.createElement('span');
-        sliderSpan.className = 'slider round';
-
+        checkbox.addEventListener('change', (e) => onToggle(e.target.checked));
         switchLabel.appendChild(checkbox);
-        switchLabel.appendChild(sliderSpan);
-        controlDiv.appendChild(labelSpan);
-        controlDiv.appendChild(switchLabel);
+        switchLabel.appendChild(document.createElement('span')).className = 'slider round';
+        header.appendChild(switchLabel);
+
+        controlDiv.appendChild(header);
+
+        if (options) {
+            const content = document.createElement('div');
+            content.className = 'collapsible-content';
+
+            for(const key in options) {
+                content.appendChild(createOptionControl(id, key, options[key]));
+            }
+            controlDiv.appendChild(content);
+
+            const settingsBtnElem = header.querySelector('.settings-btn');
+            settingsBtnElem.addEventListener('click', () => {
+                content.classList.toggle('show');
+                settingsBtnElem.classList.toggle('open');
+            });
+        }
 
         return controlDiv;
+    };
+
+    const createOptionControl = (moduleName, key, value) => {
+        const div = document.createElement('div');
+        div.className = 'option-control';
+        const label = document.createElement('label');
+        label.textContent = key;
+        div.appendChild(label);
+
+        let input;
+        if (key === 'mode' && moduleName === 'combatManager') { // Specific dropdown for combat mode
+            input = document.createElement('select');
+            ['guardian', 'aggressive', 'patrol'].forEach(mode => {
+                const option = document.createElement('option');
+                option.value = mode;
+                option.textContent = mode.charAt(0).toUpperCase() + mode.slice(1);
+                if (mode === value) option.selected = true;
+                input.appendChild(option);
+            });
+        } else if (Array.isArray(value)) {
+            input = document.createElement('textarea');
+            input.value = value.join('\n');
+        } else {
+            input = document.createElement('input');
+            input.type = typeof value === 'number' ? 'number' : 'text';
+            input.value = value;
+        }
+
+        input.addEventListener('input', () => {
+            clearTimeout(debounceTimers[key]);
+            debounceTimers[key] = setTimeout(() => {
+                let newValue = input.value;
+                if (Array.isArray(value)) newValue = input.value.split('\n').filter(v => v);
+                if (typeof value === 'number') newValue = parseFloat(input.value);
+
+                window.api.send('update-module-options', {
+                    botName: selectedBotName,
+                    moduleName,
+                    newOptions: { [key]: newValue }
+                });
+            }, 500); // Debounce changes
+        });
+
+        div.appendChild(input);
+        return div;
     };
 
     const updateBotStatus = (botName, status) => {
@@ -118,11 +192,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const statusIcon = botItem.querySelector('.status-icon');
         const statusLabel = botItem.querySelector('.status-label');
 
-        // Only update the master toggle if this bot is currently selected
         if (botName === selectedBotName) {
             const masterToggle = document.getElementById(`toggle-${botName}-bot-master-toggle`);
             if (masterToggle) {
-                masterToggle.checked = (status === 'online' || status === 'ready' || status === 'connecting');
+                masterToggle.checked = ['online', 'ready', 'connecting'].includes(status);
             }
         }
 
@@ -131,26 +204,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let iconClass, labelClass, labelText;
         switch(status) {
-            case 'online':
-            case 'ready':
-                iconClass = 'running'; labelClass = 'running'; labelText = 'Đang Chạy';
-                break;
+            case 'online': case 'ready':
+                iconClass = 'running'; labelClass = 'running'; labelText = 'Đang Chạy'; break;
             case 'connecting':
-                 iconClass = 'waiting'; labelClass = 'waiting'; labelText = 'Kết nối...';
-                break;
-            case 'stopped':
-            case 'disconnected':
+                iconClass = 'waiting'; labelClass = 'waiting'; labelText = 'Kết nối...'; break;
             default:
                 iconClass = 'disconnected'; labelClass = 'disconnected'; labelText = 'Đã Tắt';
         }
-
         statusIcon.classList.add(iconClass);
         statusLabel.classList.add(labelClass);
         statusLabel.textContent = labelText;
         statusIcon.innerHTML = `<i class="fa-solid ${iconClass === 'running' ? 'fa-check' : (iconClass === 'waiting' ? 'fa-clock' : 'fa-xmark')}"></i>`;
     };
 
-    // --- Event Listeners ---
     const handleSendCommand = () => {
         const command = cliInputField.value.trim();
         if (!command) return;
@@ -163,17 +229,11 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     cliSendBtn.addEventListener('click', handleSendCommand);
-    cliInputField.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') handleSendCommand();
-    });
+    cliInputField.addEventListener('keypress', (e) => e.key === 'Enter' && handleSendCommand());
 
-    // --- IPC Listeners ---
-    window.api.on('log-message', (message) => logToCli(message));
-    window.api.on('bot-status-update', ({ botName, status }) => {
-        updateBotStatus(botName, status);
-    });
+    window.api.on('log-message', logToCli);
+    window.api.on('bot-status-update', ({ botName, status }) => updateBotStatus(botName, status));
 
-    // --- Initialization ---
     const initialize = async () => {
         logToCli('Đang tải cấu hình bot...');
         botConfigs = await window.api.invoke('get-bot-configs');

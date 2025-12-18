@@ -247,6 +247,23 @@ class CombatManager {
 
     return false;
   }
+
+  /**
+   * Cập nhật các tùy chọn của module trong thời gian thực.
+   * @param {object} newOptions - Các tùy chọn mới để áp dụng.
+   */
+  updateOptions(newOptions) {
+    const oldMode = this.config.mode;
+    this.config = { ...this.config, ...newOptions };
+    console.log(`[${this.bot.username}] Cấu hình CombatManager đã được cập nhật.`);
+
+    if (this.config.mode !== oldMode) {
+      console.log(`[${this.bot.username}] Chế độ chiến đấu đã thay đổi từ "${oldMode}" thành "${this.config.mode}".`);
+      // Dừng hành động hiện tại để hành động mới có thể bắt đầu trong tick tiếp theo
+      this.bot.pathfinder.stop();
+      this.state.isMovingToPatrolPoint = false;
+    }
+  }
 }
 
 module.exports = CombatManager;

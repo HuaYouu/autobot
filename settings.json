@@ -25,13 +25,36 @@
             "guardianTarget": "Player1",
             "retreatHealthLevel": 10,
             "patrolArea": [
-              { "x": 100, "y": 64, "z": 100 },
-              { "x": 100, "y": 64, "z": 120 },
-              { "x": 120, "y": 64, "z": 120 },
-              { "x": 120, "y": 64, "z": 100 }
+              {
+                "x": 100,
+                "y": 64,
+                "z": 100
+              },
+              {
+                "x": 100,
+                "y": 64,
+                "z": 120
+              },
+              {
+                "x": 120,
+                "y": 64,
+                "z": 120
+              },
+              {
+                "x": 120,
+                "y": 64,
+                "z": 100
+              }
             ],
-            "blacklist": ["Zombie", "Skeleton", "Creeper"],
-            "whitelist": ["Player1", "Bot2"],
+            "blacklist": [
+              "Zombie",
+              "Skeleton",
+              "Creeper"
+            ],
+            "whitelist": [
+              "Player1",
+              "Bot2"
+            ],
             "submodules": {
               "targeting": true,
               "movement": true,
