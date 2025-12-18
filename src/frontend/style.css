@@ -142,7 +142,7 @@ button i { margin-right: 8px; }
     background-color: #282c34;
     border-radius: 5px;
     margin-bottom: 10px;
-    flex-wrap: wrap; /* Cho phép xuống dòng nếu cần */
+    flex-wrap: wrap;
 }
 .module-control-header {
     display: flex;
@@ -161,7 +161,7 @@ button i { margin-right: 8px; }
     font-size: 1.2em;
     margin-left: 10px;
 }
-.settings-btn.open i::before { content: "\f077"; /* caret-up */ }
+.settings-btn.open i::before { content: "\f077"; }
 
 .collapsible-content {
     display: none;
@@ -173,7 +173,7 @@ button i { margin-right: 8px; }
     box-sizing: border-box;
 }
 .collapsible-content.show { display: block; }
-.option-control { margin-bottom: 15px; }
+.option-control { margin-bottom: 15px; flex-grow: 1; padding: 0 5px; }
 .option-control label {
     display: block;
     margin-bottom: 5px;
@@ -189,10 +189,46 @@ button i { margin-right: 8px; }
     color: #abb2bf;
     box-sizing: border-box;
 }
-.option-control textarea {
-    min-height: 80px;
-    resize: vertical;
+
+.option-row { display: flex; gap: 10px; margin-bottom: 15px; }
+.hidden { display: none !important; }
+
+/* Tag input styles */
+.tag-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    padding: 5px;
+    border: 1px solid #4a5260;
+    border-radius: 4px;
+    background-color: #282c34;
 }
+.tag {
+    display: flex;
+    align-items: center;
+    background-color: #61afef;
+    color: #282c34;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.9em;
+}
+.tag-close-btn {
+    margin-left: 5px;
+    cursor: pointer;
+    font-weight: bold;
+}
+.tag-input {
+    flex-grow: 1;
+    border: none;
+    background: none;
+    outline: none;
+    color: #abb2bf;
+    padding: 5px;
+}
+
+/* Patrol Area styles */
+.patrol-area-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.patrol-area-grid label { grid-column: 1 / -1; font-weight: bold; }
 
 /* Movement Control styles */
 #movement-control {
@@ -225,9 +261,8 @@ button i { margin-right: 8px; }
     width: 100%;
 }
 #move-btn.moving {
-    background-color: #e06c75; /* Red for stop */
+    background-color: #e06c75;
 }
-
 
 /* The switch */
 .switch { position: relative; display: inline-block; width: 60px; height: 34px; flex-shrink: 0; }
